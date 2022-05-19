@@ -99,14 +99,14 @@ def ingest_data(filename: str):
     return results
 
 
-def drop_tables(conn, file_path="sql/CLEANUP.sql"):
+def drop_tables(conn, file_path="../sql/CLEANUP.sql"):
     with open(file_path) as cleanup:
         drop = cleanup.read()
         cursor = conn.cursor()
         cursor.execute(drop)
 
 
-def build_tables(conn, file_path="sql/SETUP.sql"):
+def build_tables(conn, file_path="../sql/SETUP.sql"):
     with open(file_path) as cleanup:
         tables = cleanup.read()
         cursor = conn.cursor()
@@ -120,7 +120,7 @@ if __name__ == "__main__":
     build_tables(conn) 
 
     sheets = ingest_data(
-        "data/Data-v03.xlsx",
+        "../data/Data-v03.xlsx",
     )
 
     for key in sheets:
@@ -129,6 +129,6 @@ if __name__ == "__main__":
         elif key == "Users":
             ingest_users(conn, sheets[key])
     
-    ingest_criteria(conn, pd.read_csv("data/info/profile.csv"))
+    ingest_criteria(conn, pd.read_csv("../data/info/profile.csv"))
 
     conn.close()
