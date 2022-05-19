@@ -20,7 +20,41 @@ sheet_ingest_func = {
 }
 
 
+def ingest_questions(conn, df):
+    print("Ingesting questions")
+    values = []
+    cursor = conn.cursor()
+
+    for _, row in df.iterrows():
+        r = row[
+            [
+                "QuestionId",
+                "Survey",
+                "Question",
+                "QuestionType",
+                "Profile Characteristic",
+                "Note",
+            ]
+        ]
+
+        if r["QuestionId"] == "NULL":
+            break
+        r["QuestionId"] = int(r["QuestionId"])
+        r["Survey"] = int(r["Survey"])
+        assert r["Survey"] in (1, 2)
+        values.append(tuple(r.values))
+    print(values[0])
+
+    # --- INSERT INTO THE TABLE and commit changes
+    cursor.executemany(
+        """INSERT INTO question (Id, SurveyId, Question, QuestionType, ProfileCharacteristic, Note) VALUES (%s, %s, %s, %s, %s, %s)""",
+        values,
+    )
+    conn.commit()
+
+
 def ingest_users(conn, df):
+    print("Ingesting users")
     values = []
     cursor = conn.cursor()
 
@@ -38,6 +72,7 @@ def ingest_users(conn, df):
 
 
 def ingest_surveys(conn, df):
+    print("Ingesting surveys")
     values = []
     cursor = conn.cursor()
 
@@ -47,30 +82,13 @@ def ingest_surveys(conn, df):
 
     # --- INSERT INTO THE TABLE and commit changes
     cursor.executemany(
-        """INSERT INTO survey (Id, ShortName, Name, Description, createdAt, lastUpdatedAt) VALUES (%s, %s, %s, %s, NOW(), NOW())""",
+        """INSERT INTO survey (Id, ShortName, Name, Description, Created, LastUpdated) VALUES (%s, %s, %s, %s, NOW(), NOW())""",
         values,
     )
     conn.commit()
 
 
 def ingest_data(filename: str):
-    """
-    Ingest data from a csv file, returning the dataframes
-
-    Parameters
-    ----------
-        filename : str
-            path to .xlxs file
-
-    Returns
-    -------
-        results : list of dict
-            list of sheetnames with assicated dataframe for data
-
-    Warns
-    -----
-        any sheets that can't be converted into a dataframe will be printed out for reformatting
-    """
     book = pd.ExcelFile(filename, engine="openpyxl")
     results = {}
 
@@ -89,6 +107,7 @@ def drop_tables(conn, file_path="../sql/CLEANUP.sql"):
         drop = cleanup.read()
         cursor = conn.cursor()
         cursor.execute(drop)
+    print("Dropped Tables")
 
 
 def build_tables(conn, file_path="../sql/SETUP.sql"):
@@ -96,6 +115,7 @@ def build_tables(conn, file_path="../sql/SETUP.sql"):
         tables = cleanup.read()
         cursor = conn.cursor()
         cursor.execute(tables)
+    print("Built Tables")
 
 
 if __name__ == "__main__":
@@ -104,13 +124,11 @@ if __name__ == "__main__":
     build_tables(conn)
 
     sheets = ingest_data(
-        "../data/Data-v03.xlsx",
+        "../data/info/Data-v03.xlsx",
     )
 
-    for key in sheets:
-        if key == "Surveys":
-            ingest_surveys(conn, sheets[key])
-        elif key == "Users":
-            ingest_users(conn, sheets[key])
+    ingest_surveys(conn, sheets["Surveys"])
+    ingest_users(conn, sheets["Users"])
+    ingest_questions(conn, sheets["Survey Questions New"])
 
     conn.close()

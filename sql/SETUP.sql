@@ -3,7 +3,7 @@ CREATE TABLE account (
     Email VARCHAR(255) UNIQUE, 
     Password VARCHAR(255),
     Name VARCHAR(255),
-    accountType ENUM('admin', 'user'),
+    AccountType ENUM('admin', 'user'),
     PRIMARY KEY(Id)
 );
 
@@ -12,23 +12,30 @@ CREATE TABLE survey (
     ShortName VARCHAR(255),
     Name VARCHAR(255),
     Description VARCHAR(255),
-    createdAt DATE, 
-    lastUpdatedAt DATE, 
+    Created DATE, 
+    LastUpdated DATE, 
     PRIMARY KEY(Id)
 );
 
 CREATE TABLE question (
-    QId int,
-    question VARCHAR(255), 
-    questionType ENUM('multiple', 'single'),
-    PRIMARY KEY(QId)
+    Id int,
+    SurveyId int,
+    Question VARCHAR(255), 
+    QuestionType int,
+    ProfileCharacteristic VARCHAR(255),
+    Note VARCHAR(255),
+    PRIMARY KEY(Id, SurveyId),
+    FOREIGN KEY (SurveyId) REFERENCES survey(Id)
 );
 
 CREATE TABLE questionAcceptableAnswer (
+    SurveyId int,
     questionNumber int,
     answerValue VARCHAR(255), 
     questionType ENUM('multiple', 'single'),
-	FOREIGN KEY (questionNumber) REFERENCES question(QId)
+    PRIMARY KEY (SurveyId, questionNumber),
+	FOREIGN KEY (questionNumber) REFERENCES question(Id),
+    FOREIGN KEY (SurveyId) REFERENCES survey(Id)
 );
 
 CREATE TABLE response (
@@ -128,7 +135,7 @@ CREATE TABLE surveyResponse (
 	qNumber int,
     aNumber int,
     FOREIGN KEY (qNumber) REFERENCES answers(AnsId),
-    FOREIGN KEY (aNumber) REFERENCES question(QId),
+    FOREIGN KEY (aNumber) REFERENCES question(Id),
     UNIQUE(qNumber, aNumber)
 );
 
