@@ -87,6 +87,21 @@ def ingest_surveys(conn, df):
     )
     conn.commit()
 
+def ingest_criteria(conn, df):
+    values = []
+    cursor = conn.cursor()
+
+    for index, row in df.iloc[1:].iterrows():
+        r = tuple(row[["ID", "Characteristc", "Description", "Dimension"]].values)
+        values.append(r)
+
+    # --- INSERT INTO THE TABLE and commit changes
+    cursor.executemany(
+        """INSERT INTO criteria (CId, cName, cDescription, cCategory) VALUES (%s, %s, %s, %s)""",
+        values,
+    )
+    conn.commit()
+    
 
 def ingest_data(filename: str):
     book = pd.ExcelFile(filename, engine="openpyxl")
@@ -119,9 +134,10 @@ def build_tables(conn, file_path="../sql/SETUP.sql"):
 
 
 if __name__ == "__main__":
-    conn = MySQLdb.connect(host="127.0.0.1", port=12345, user="root", database="temp")
+    conn = MySQLdb.connect(host="127.0.0.1", port=3306, user="root", database="CSC366")
+    print(__file__)
     drop_tables(conn)
-    build_tables(conn)
+    build_tables(conn) 
 
     sheets = ingest_data(
         "../data/info/Data-v03.xlsx",

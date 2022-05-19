@@ -60,8 +60,8 @@ CREATE TABLE profile (
 CREATE TABLE criteria (
     CId int,
 	cName VARCHAR(255),
-    cValue int,
-    cDescription VARCHAR(255),
+    cDescription TEXT,
+    cCategory VARCHAR(255),
     PRIMARY KEY(CId)
 );
 
