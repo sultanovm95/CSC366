@@ -19,7 +19,7 @@ CREATE TABLE survey (
 
 CREATE TABLE question (
     QId int,
-    question VARCHAR(255), 
+    question VARCHAR(255),
     questionType ENUM('multiple', 'single'),
     PRIMARY KEY(QId)
 );
@@ -53,8 +53,8 @@ CREATE TABLE profile (
 CREATE TABLE criteria (
     CId int,
 	cName VARCHAR(255),
-    cValue int,
-    cDescription VARCHAR(255),
+    cDescription TEXT,
+    cCategory VARCHAR(255),
     PRIMARY KEY(CId)
 );
 

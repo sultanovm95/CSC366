@@ -52,6 +52,21 @@ def ingest_surveys(conn, df):
     )
     conn.commit()
 
+def ingest_criteria(conn, df):
+    values = []
+    cursor = conn.cursor()
+
+    for index, row in df.iloc[1:].iterrows():
+        r = tuple(row[["ID", "Characteristc", "Description", "Dimension"]].values)
+        values.append(r)
+
+    # --- INSERT INTO THE TABLE and commit changes
+    cursor.executemany(
+        """INSERT INTO criteria (CId, cName, cDescription, cCategory) VALUES (%s, %s, %s, %s)""",
+        values,
+    )
+    conn.commit()
+    
 
 def ingest_data(filename: str):
     """
@@ -84,14 +99,14 @@ def ingest_data(filename: str):
     return results
 
 
-def drop_tables(conn, file_path="../sql/CLEANUP.sql"):
+def drop_tables(conn, file_path="sql/CLEANUP.sql"):
     with open(file_path) as cleanup:
         drop = cleanup.read()
         cursor = conn.cursor()
         cursor.execute(drop)
 
 
-def build_tables(conn, file_path="../sql/SETUP.sql"):
+def build_tables(conn, file_path="sql/SETUP.sql"):
     with open(file_path) as cleanup:
         tables = cleanup.read()
         cursor = conn.cursor()
@@ -99,12 +114,13 @@ def build_tables(conn, file_path="../sql/SETUP.sql"):
 
 
 if __name__ == "__main__":
-    conn = MySQLdb.connect(host="127.0.0.1", port=12345, user="root", database="temp")
+    conn = MySQLdb.connect(host="127.0.0.1", port=3306, user="root", database="CSC366")
+    print(__file__)
     drop_tables(conn)
-    build_tables(conn)
+    build_tables(conn) 
 
     sheets = ingest_data(
-        "../data/Data-v03.xlsx",
+        "data/Data-v03.xlsx",
     )
 
     for key in sheets:
@@ -112,5 +128,7 @@ if __name__ == "__main__":
             ingest_surveys(conn, sheets[key])
         elif key == "Users":
             ingest_users(conn, sheets[key])
+    
+    ingest_criteria(conn, pd.read_csv("data/info/profile.csv"))
 
     conn.close()
