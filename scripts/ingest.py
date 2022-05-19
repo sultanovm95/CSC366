@@ -8,16 +8,83 @@ sheet_ingest_func = {
     "Users": 0,
     "Survey Questions New": 0,
     "QuestionResponses": 0,
-    "URE Survey Questions": 0,
-    "Work Survey Questions": 0,
-    "Survey Questions": 0,
     "URE Experience": 0,
     "Work Experience": 0,
-    "Work Profile ": 0,
-    "Work Profile-copy-values": 0,
+    "Work Profile": 0,
     "Work Preferences": 0,
-    "Definitions": 0,
 }
+
+
+def ingest_work_responses(conn, df):
+    print("Ingesting WORK responses")
+    responses = []
+    answers = []
+    cursor = conn.cursor()
+
+    for i, row in df.iterrows():
+        if i == 0:
+            continue
+        # remove empty cells from dataframe
+        if set(row.values) == {"NULL"}:
+            break
+        r = row[:91]
+
+        # insert response
+        response_num = int(r[0].lower().replace(" ", "").replace("fakecase", ""))
+        response = (response_num, int(r[1]), 2)
+        print(response)
+        responses.append(response)
+
+        # if r["QuestionId"] == "NULL":
+        #     break
+
+        # r["QuestionId"] = int(r["QuestionId"])
+        # r["Survey"] = int(r["Survey"])
+        # r["ResponseValue"] = int(r["ResponseValue"])
+        # values.append(tuple(r.values))
+
+    # --- INSERT INTO THE TABLE and commit changes
+    cursor.executemany(
+        """INSERT INTO response (Id, UserId, SurveyId, AnswerDate) VALUES (%s, %s, %s, NOW())""",
+        responses,
+    )
+    conn.commit()
+
+
+def ingest_ure_responses(conn, df):
+    print("Ingesting URE responses")
+    responses = []
+    answers = []
+    cursor = conn.cursor()
+
+    for i, row in df.iterrows():
+        if i == 0:
+            continue
+        # remove empty cells from dataframe
+        if set(row.values) == {"NULL"}:
+            break
+        r = row[:96]
+
+        # insert response
+        response_num = int(r[0].lower().replace(" ", "").replace("fakecase", ""))
+        response = (response_num, int(r[1]), 1)
+        print(response)
+        responses.append(response)
+
+        # if r["QuestionId"] == "NULL":
+        #     break
+
+        # r["QuestionId"] = int(r["QuestionId"])
+        # r["Survey"] = int(r["Survey"])
+        # r["ResponseValue"] = int(r["ResponseValue"])
+        # values.append(tuple(r.values))
+
+    # --- INSERT INTO THE TABLE and commit changes
+    cursor.executemany(
+        """INSERT INTO response (Id, UserId, SurveyId, AnswerDate) VALUES (%s, %s, %s, NOW())""",
+        responses,
+    )
+    conn.commit()
 
 
 def ingest_question_answers(conn, df):
@@ -35,7 +102,6 @@ def ingest_question_answers(conn, df):
         r["Survey"] = int(r["Survey"])
         r["ResponseValue"] = int(r["ResponseValue"])
         values.append(tuple(r.values))
-    print(values[0])
 
     # --- INSERT INTO THE TABLE and commit changes
     cursor.executemany(
@@ -106,7 +172,7 @@ def ingest_surveys(conn, df):
 
     # --- INSERT INTO THE TABLE and commit changes
     cursor.executemany(
-        """INSERT INTO survey (Id, ShortName, Name, Description, Created, LastUpdated) VALUES (%s, %s, %s, %s, NOW(), NOW())""",
+        """INSERT INTO survey (Id, ShortName, Name, Description, CreatedDate, LastUpdated) VALUES (%s, %s, %s, %s, NOW(), NOW())""",
         values,
     )
     conn.commit()
@@ -171,5 +237,7 @@ if __name__ == "__main__":
     ingest_users(conn, sheets["Users"])
     ingest_questions(conn, sheets["Survey Questions New"])
     ingest_question_answers(conn, sheets["QuestionResponses"])
+    ingest_ure_responses(conn, sheets["URE Experience"])
+    ingest_work_responses(conn, sheets["Work Experience"])
 
     conn.close()

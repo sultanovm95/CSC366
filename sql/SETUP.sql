@@ -4,7 +4,7 @@ CREATE TABLE account (
     Password VARCHAR(255),
     Name VARCHAR(255),
     AccountType ENUM('admin', 'user'),
-    PRIMARY KEY(Id)
+    PRIMARY KEY (Id)
 );
 
 CREATE TABLE survey (
@@ -12,9 +12,9 @@ CREATE TABLE survey (
     ShortName VARCHAR(255),
     Name VARCHAR(255),
     Description VARCHAR(255),
-    Created DATE, 
+    CreatedDate DATE, 
     LastUpdated DATE, 
-    PRIMARY KEY(Id)
+    PRIMARY KEY (Id)
 );
 
 CREATE TABLE question (
@@ -24,14 +24,14 @@ CREATE TABLE question (
     QuestionType int,
     ProfileCharacteristic VARCHAR(255),
     Note VARCHAR(255),
-    PRIMARY KEY(Id, SurveyId),
+    PRIMARY KEY (Id, SurveyId),
     FOREIGN KEY (SurveyId) REFERENCES survey(Id)
 );
 
 CREATE TABLE questionAcceptableAnswer (
     SurveyId int,
     QuestionId int,
-    AnswerValue VARCHAR(255), 
+    AnswerValue VARCHAR(255),
     AnswerText VARCHAR(255),
     Comment VARCHAR(255),
     PRIMARY KEY (SurveyId, QuestionId, AnswerValue),
@@ -40,22 +40,27 @@ CREATE TABLE questionAcceptableAnswer (
 );
 
 CREATE TABLE response (
-	RId int,
-    UId int,
-    answeredAt DATE,
-    PRIMARY KEY(RId),
-    FOREIGN KEY (UId) REFERENCES account(id)
+	Id int,
+    UserId int,
+    SurveyId int,
+    AnswerDate DATE,
+    PRIMARY KEY (Id),
+    FOREIGN KEY (UserId) REFERENCES account(Id),
+    FOREIGN KEY (SurveyId) REFERENCES survey(Id)
 );
 
 CREATE TABLE answers (
-	AnsId int,
-    answerValue VARCHAR(255) NOT NULL,
-    PRIMARY KEY(AnsId)
+	Id int,
+    QuestionId int,
+    ResponseId int,
+    AnswerValue VARCHAR(255) NOT NULL,
+    PRIMARY KEY (Id, QuestionId, ResponseId),
+    FOREIGN KEY (QuestionId) REFERENCES question(Id)
 );
 
 CREATE TABLE profile (
 	PId int,
-    PRIMARY KEY(PId)
+    PRIMARY KEY (PId)
 );
 
 CREATE TABLE criteria (
@@ -89,7 +94,7 @@ CREATE TABLE accountProfile (
 CREATE TABLE responseProfile (
 	RId int,
     PId int,
-    FOREIGN KEY (RId) REFERENCES response(RId),
+    FOREIGN KEY (RId) REFERENCES response(Id),
     FOREIGN KEY (PId) REFERENCES profile(PId),
     UNIQUE(RId, PId)
 );
@@ -135,7 +140,7 @@ CREATE TABLE surveyProfileCriteria (
 CREATE TABLE surveyResponse (
 	qNumber int,
     aNumber int,
-    FOREIGN KEY (qNumber) REFERENCES answers(AnsId),
+    FOREIGN KEY (qNumber) REFERENCES answers(Id),
     FOREIGN KEY (aNumber) REFERENCES question(Id),
     UNIQUE(qNumber, aNumber)
 );
