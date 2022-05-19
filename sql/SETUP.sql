@@ -59,7 +59,8 @@ CREATE TABLE answers (
 );
 
 CREATE TABLE profile (
-	PId int,
+	PId int AUTO_INCREMENT,
+    PType VARCHAR(255),
     PRIMARY KEY (PId)
 );
 
