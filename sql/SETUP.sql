@@ -64,7 +64,7 @@ CREATE TABLE onet (
     PRIMARY KEY(ONId)
 );
 
-CREATE TABLE feautures (
+CREATE TABLE features (
 	FId int,
     featuredValue VARCHAR(255) NOT NULL,
     PRIMARY KEY(FId)
@@ -98,7 +98,7 @@ CREATE TABLE jobFeatures (
 	ONId int,
     FeaturedId int,
     FOREIGN KEY (ONId) REFERENCES onet(ONId),
-    FOREIGN KEY (FeaturedId) REFERENCES feautures(FId),
+    FOREIGN KEY (FeaturedId) REFERENCES features(FId),
     UNIQUE(ONId, FeaturedId)
 );
 
