@@ -2,6 +2,16 @@ import pandas as pd
 import MySQLdb
 import secrets
 import numpy as np
+import os
+from dotenv import load_dotenv
+#Loads Enviroment Variables from .env file use command: 'touch .env' to create
+load_dotenv()
+
+#PORT for MYSQL
+PORT = int(os.getenv('PORT'))
+#Either Absolute path to dir, relative path, or nothing
+DIRPATH = os.getenv('DIRPATH')
+DB = os.getenv('MYSQL_DB')
 
 sheet_ingest_func = {
     "Surveys": 0,
@@ -13,7 +23,6 @@ sheet_ingest_func = {
     "Work Profile": 0,
     "Work Preferences": 0,
 }
-
 
 def ingest_work_responses(conn, df):
     print("Ingesting WORK responses")
@@ -208,7 +217,7 @@ def ingest_data(filename: str):
     return results
 
 
-def drop_tables(conn, file_path="../sql/CLEANUP.sql"):
+def drop_tables(conn, file_path= DIRPATH + "sql/CLEANUP.sql"):
     with open(file_path) as cleanup:
         drop = cleanup.read()
         cursor = conn.cursor()
@@ -216,7 +225,7 @@ def drop_tables(conn, file_path="../sql/CLEANUP.sql"):
     print("Dropped Tables")
 
 
-def build_tables(conn, file_path="../sql/SETUP.sql"):
+def build_tables(conn, file_path= DIRPATH + "sql/SETUP.sql"):
     with open(file_path) as cleanup:
         tables = cleanup.read()
         cursor = conn.cursor()
@@ -225,12 +234,12 @@ def build_tables(conn, file_path="../sql/SETUP.sql"):
 
 
 if __name__ == "__main__":
-    conn = MySQLdb.connect(host="127.0.0.1", port=12345, user="root", database="temp")
+    conn = MySQLdb.connect(host="127.0.0.1", port=PORT, user="root", database=DB)
     drop_tables(conn)
     build_tables(conn)
 
     sheets = ingest_data(
-        "../data/info/Data-v03.xlsx",
+        DIRPATH + "data/info/Data-v03.xlsx",
     )
 
     ingest_surveys(conn, sheets["Surveys"])
@@ -239,5 +248,6 @@ if __name__ == "__main__":
     ingest_question_answers(conn, sheets["QuestionResponses"])
     ingest_ure_responses(conn, sheets["URE Experience"])
     ingest_work_responses(conn, sheets["Work Experience"])
+    ingest_criteria(conn, pd.read_csv(DIRPATH + "data/info/profile.csv"))
 
     conn.close()
