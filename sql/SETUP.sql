@@ -1,16 +1,20 @@
 CREATE TABLE account (
-    id int, 
+    Id int, 
     Email VARCHAR(255) UNIQUE, 
-    Passowrd VARCHAR(255),
+    Password VARCHAR(255),
+    Name VARCHAR(255),
     accountType ENUM('admin', 'user'),
-    PRIMARY KEY(id)
+    PRIMARY KEY(Id)
 );
 
 CREATE TABLE survey (
-    SurveyId int, 
+    Id int, 
+    ShortName VARCHAR(255),
+    Name VARCHAR(255),
+    Description VARCHAR(255),
     createdAt DATE, 
     lastUpdatedAt DATE, 
-    PRIMARY KEY(SurveyId)
+    PRIMARY KEY(Id)
 );
 
 CREATE TABLE question (
@@ -29,8 +33,10 @@ CREATE TABLE questionAcceptableAnswer (
 
 CREATE TABLE response (
 	RId int,
+    UId int,
     answeredAt DATE,
-    PRIMARY KEY(RId)
+    PRIMARY KEY(RId),
+    FOREIGN KEY (UId) REFERENCES account(id)
 );
 
 CREATE TABLE answers (
@@ -109,6 +115,7 @@ CREATE TABLE oNETProfileCriteria (
     FOREIGN KEY (PId) REFERENCES profile(PId),
     FOREIGN KEY (CId) REFERENCES criteria(CId)
 );
+
 CREATE TABLE surveyProfileCriteria (
 	PId int,
 	CId int,
