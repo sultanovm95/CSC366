@@ -20,6 +20,31 @@ sheet_ingest_func = {
 }
 
 
+def ingest_question_answers(conn, df):
+    print("Ingesting question answers")
+    values = []
+    cursor = conn.cursor()
+
+    for _, row in df.iterrows():
+        r = row[["Survey", "QuestionId", "ResponseValue", "ResponseText", "Comment"]]
+
+        if r["QuestionId"] == "NULL":
+            break
+
+        r["QuestionId"] = int(r["QuestionId"])
+        r["Survey"] = int(r["Survey"])
+        r["ResponseValue"] = int(r["ResponseValue"])
+        values.append(tuple(r.values))
+    print(values[0])
+
+    # --- INSERT INTO THE TABLE and commit changes
+    cursor.executemany(
+        """INSERT INTO questionAcceptableAnswer (SurveyId, QuestionId, AnswerValue, AnswerText, Comment) VALUES (%s, %s, %s, %s, %s)""",
+        values,
+    )
+    conn.commit()
+
+
 def ingest_questions(conn, df):
     print("Ingesting questions")
     values = []
@@ -43,7 +68,6 @@ def ingest_questions(conn, df):
         r["Survey"] = int(r["Survey"])
         assert r["Survey"] in (1, 2)
         values.append(tuple(r.values))
-    print(values[0])
 
     # --- INSERT INTO THE TABLE and commit changes
     cursor.executemany(
@@ -87,11 +111,12 @@ def ingest_surveys(conn, df):
     )
     conn.commit()
 
+
 def ingest_criteria(conn, df):
     values = []
     cursor = conn.cursor()
 
-    for index, row in df.iloc[1:].iterrows():
+    for _, row in df.iloc[1:].iterrows():
         r = tuple(row[["ID", "Characteristc", "Description", "Dimension"]].values)
         values.append(r)
 
@@ -101,7 +126,7 @@ def ingest_criteria(conn, df):
         values,
     )
     conn.commit()
-    
+
 
 def ingest_data(filename: str):
     book = pd.ExcelFile(filename, engine="openpyxl")
@@ -134,10 +159,9 @@ def build_tables(conn, file_path="../sql/SETUP.sql"):
 
 
 if __name__ == "__main__":
-    conn = MySQLdb.connect(host="127.0.0.1", port=3306, user="root", database="CSC366")
-    print(__file__)
+    conn = MySQLdb.connect(host="127.0.0.1", port=12345, user="root", database="temp")
     drop_tables(conn)
-    build_tables(conn) 
+    build_tables(conn)
 
     sheets = ingest_data(
         "../data/info/Data-v03.xlsx",
@@ -146,5 +170,6 @@ if __name__ == "__main__":
     ingest_surveys(conn, sheets["Surveys"])
     ingest_users(conn, sheets["Users"])
     ingest_questions(conn, sheets["Survey Questions New"])
+    ingest_question_answers(conn, sheets["QuestionResponses"])
 
     conn.close()

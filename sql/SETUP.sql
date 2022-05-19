@@ -30,11 +30,12 @@ CREATE TABLE question (
 
 CREATE TABLE questionAcceptableAnswer (
     SurveyId int,
-    questionNumber int,
-    answerValue VARCHAR(255), 
-    questionType ENUM('multiple', 'single'),
-    PRIMARY KEY (SurveyId, questionNumber),
-	FOREIGN KEY (questionNumber) REFERENCES question(Id),
+    QuestionId int,
+    AnswerValue VARCHAR(255), 
+    AnswerText VARCHAR(255),
+    Comment VARCHAR(255),
+    PRIMARY KEY (SurveyId, QuestionId, AnswerValue),
+	FOREIGN KEY (QuestionId) REFERENCES question(Id),
     FOREIGN KEY (SurveyId) REFERENCES survey(Id)
 );
 
