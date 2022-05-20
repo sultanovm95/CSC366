@@ -209,12 +209,27 @@ def ingest_profiles(conn, df):
     values = []
     cursor = conn.cursor()
     for _, row in df.iterrows():
-        r = "Desired"
+        r = tuple([row["Profile Id"], row["Profile Name"], 'Desired'])
         values.append(r)
     
     # --- INSERT INTO THE TABLE and commit changes
     cursor.executemany(
-        """INSERT INTO profile (PType) VALUES (%s)""",
+        """INSERT INTO profile (PId, PName, PType) VALUES (%s, %s, %s)""",
+        values,
+    )
+    conn.commit()
+
+def ingest_accountProfiles(conn, df):
+    print("Ingesting accountProfiles")
+    values = []
+    cursor = conn.cursor()
+    for _, row in df.iterrows():
+        r = tuple(row[["User", "Profile Id"]].values)
+        values.append(r)
+    
+    # --- INSERT INTO THE TABLE and commit changes
+    cursor.executemany(
+        """INSERT INTO accountProfile (AId, PId) VALUES (%s, %s)""",
         values,
     )
     conn.commit()
@@ -264,7 +279,8 @@ if __name__ == "__main__":
     ingest_question_answers(conn, sheets["QuestionResponses"])
     ingest_ure_responses(conn, sheets["URE Experience"])
     ingest_work_responses(conn, sheets["Work Experience"])
-    ingest_profiles(conn, pd.read_csv(DIRPATH + "data/info/desiredProfiles.csv"))
     ingest_criteria(conn, pd.read_csv(DIRPATH + "data/info/profile.csv"))
+    ingest_profiles(conn, pd.read_csv(DIRPATH + "data/info/WorkPrefs.csv"))
+    ingest_accountProfiles(conn, pd.read_csv(DIRPATH + "data/info/WorkPrefs.csv"))
 
     conn.close()

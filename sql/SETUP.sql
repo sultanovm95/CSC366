@@ -59,8 +59,9 @@ CREATE TABLE answers (
 );
 
 CREATE TABLE profile (
-	PId int AUTO_INCREMENT,
+	PId int,
     PType VARCHAR(255),
+    PName VARCHAR(255),
     PRIMARY KEY (PId)
 );
 
@@ -116,26 +117,14 @@ CREATE TABLE jobFeatures (
     UNIQUE(ONId, FeaturedId)
 );
 
-CREATE TABLE desiredProfileCriteria (
+CREATE TABLE profileCriteria (
 	CId int,
+    PId int,
+    cValue int NOT NULL,
     importanceRating int NOT NULL,
-    FOREIGN KEY (CId) REFERENCES criteria(CId)
-);
-
-CREATE TABLE oNETProfileCriteria (
-	PId int,
-	CId int,
-    value int,
+    FOREIGN KEY (CId) REFERENCES criteria(CId),
     FOREIGN KEY (PId) REFERENCES profile(PId),
-    FOREIGN KEY (CId) REFERENCES criteria(CId)
-);
-
-CREATE TABLE surveyProfileCriteria (
-	PId int,
-	CId int,
-    value int,
-    FOREIGN KEY (PId) REFERENCES profile(PId),
-    FOREIGN KEY (CId) REFERENCES criteria(CId)
+    PRIMARY Key(PId, CId)
 );
 
 CREATE TABLE surveyResponse (

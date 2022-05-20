@@ -1,8 +1,6 @@
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS jobProfile;
-DROP TABLE IF EXISTS oNETProfileCriteria;
-DROP TABLE IF EXISTS surveyProfileCriteria;
-DROP TABLE IF EXISTS desiredProfileCriteria;
+DROP TABLE IF EXISTS profileCriteria;
 DROP TABLE IF EXISTS surveyResponse;
 DROP TABLE IF EXISTS jobFeatures;
 DROP TABLE IF EXISTS account;
@@ -17,4 +15,10 @@ DROP TABLE IF EXISTS onet;
 DROP TABLE IF EXISTS features;
 DROP TABLE IF EXISTS accountProfile;
 DROP TABLE IF EXISTS responseProfile;
+
+-- Drop Statements for old tables that may still be around
+DROP TABLE IF EXISTS feautures;
+DROP TABLE IF EXISTS oNETProfileCriteria;
+DROP TABLE IF EXISTS desiredProfileCriteria;
+DROP TABLE IF EXISTS surveyProfileCriteria;
 SET FOREIGN_KEY_CHECKS = 1;
