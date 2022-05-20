@@ -80,14 +80,6 @@ CREATE TABLE onet (
     PRIMARY KEY(ONetId)
 );
 
-/*
-CREATE TABLE features (
-	FId int,
-    featuredValue VARCHAR(255) NOT NULL,
-    PRIMARY KEY(FId)
-);
-*/
-
 CREATE TABLE accountProfile (
 	AId int,
     PId int,
@@ -107,20 +99,9 @@ CREATE TABLE responseProfile (
 CREATE TABLE jobProfile (
 	JId int,
     profileId int,
-	jobName VARCHAR(255) NOT NULL,
     FOREIGN KEY(profileId) REFERENCES profile(PId),
     PRIMARY KEY(JId)
 );
-
-/*
-CREATE TABLE jobFeatures (
-	ONetId VARCHAR(255),
-    FeaturedId int,
-    FOREIGN KEY (ONetId) REFERENCES onet(ONetId),
-    FOREIGN KEY (FeaturedId) REFERENCES features(FId),
-    UNIQUE(ONetId, FeaturedId)
-);
-*/
 
 CREATE TABLE profileCriteria (
 	CId int,
@@ -130,13 +111,5 @@ CREATE TABLE profileCriteria (
     FOREIGN KEY (CId) REFERENCES criteria(CId),
     FOREIGN KEY (PId) REFERENCES profile(PId),
     PRIMARY Key(PId, CId)
-);
-
-CREATE TABLE surveyResponse (
-	qNumber int,
-    aNumber int,
-    FOREIGN KEY (qNumber) REFERENCES answers(Id),
-    FOREIGN KEY (aNumber) REFERENCES question(Id),
-    UNIQUE(qNumber, aNumber)
 );
 
