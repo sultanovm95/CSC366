@@ -74,9 +74,10 @@ CREATE TABLE criteria (
 );
 
 CREATE TABLE onet (
-	ONId int,
-    ODescription VARCHAR(255) NOT NULL,
-    PRIMARY KEY(ONId)
+	ONetId VARCHAR(255),
+    ONetJob VARCHAR(255) NOT NULL,
+    ONetDescription VARCHAR(255) NOT NULL,
+    PRIMARY KEY(ONetId)
 );
 
 /*
@@ -113,11 +114,11 @@ CREATE TABLE jobProfile (
 
 /*
 CREATE TABLE jobFeatures (
-	ONId int,
+	ONetId VARCHAR(255),
     FeaturedId int,
-    FOREIGN KEY (ONId) REFERENCES onet(ONId),
+    FOREIGN KEY (ONetId) REFERENCES onet(ONetId),
     FOREIGN KEY (FeaturedId) REFERENCES features(FId),
-    UNIQUE(ONId, FeaturedId)
+    UNIQUE(ONetId, FeaturedId)
 );
 */
 
