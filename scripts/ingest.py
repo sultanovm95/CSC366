@@ -1,3 +1,4 @@
+from unicodedata import name
 import pandas as pd
 import MySQLdb
 import secrets
@@ -188,16 +189,47 @@ def ingest_surveys(conn, df):
 
 
 def ingest_criteria(conn, df):
+    print("Ingesting criteria")
     values = []
     cursor = conn.cursor()
 
-    for _, row in df.iloc[1:].iterrows():
+    for _, row in df.iterrows():
         r = tuple(row[["ID", "Characteristc", "Description", "Dimension"]].values)
         values.append(r)
 
     # --- INSERT INTO THE TABLE and commit changes
     cursor.executemany(
         """INSERT INTO criteria (CId, cName, cDescription, cCategory) VALUES (%s, %s, %s, %s)""",
+        values,
+    )
+    conn.commit()
+
+def ingest_profiles(conn, df):
+    print("Ingesting profiles")
+    values = []
+    cursor = conn.cursor()
+    for _, row in df.iterrows():
+        r = tuple([row["Profile Id"], row["Profile Name"], 'Desired'])
+        values.append(r)
+    
+    # --- INSERT INTO THE TABLE and commit changes
+    cursor.executemany(
+        """INSERT INTO profile (PId, PName, PType) VALUES (%s, %s, %s)""",
+        values,
+    )
+    conn.commit()
+
+def ingest_accountProfiles(conn, df):
+    print("Ingesting accountProfiles")
+    values = []
+    cursor = conn.cursor()
+    for _, row in df.iterrows():
+        r = tuple(row[["User", "Profile Id"]].values)
+        values.append(r)
+    
+    # --- INSERT INTO THE TABLE and commit changes
+    cursor.executemany(
+        """INSERT INTO accountProfile (AId, PId) VALUES (%s, %s)""",
         values,
     )
     conn.commit()
@@ -223,7 +255,6 @@ def ingest_onet(conn, df):
 def ingest_data(filename: str):
     book = pd.ExcelFile(filename, engine="openpyxl")
     results = {}
-
     for names in book.sheet_names:
         try:
             results[names] = pd.read_excel(book, names).replace(
