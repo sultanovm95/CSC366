@@ -203,6 +203,23 @@ def ingest_criteria(conn, df):
     conn.commit()
 
 
+def ingest_onet(conn, df):
+    print("Ingesting ONet")
+    values = []
+    cursor = conn.cursor()
+    
+    for _, row in df.iloc[1:].iterrows():
+        r = tuple(row[["Code", "Occupation", "Occupation Types"]].values)
+        values.append(r)
+        
+    # --- INSERT INTO THE TABLE and commit changes
+    cursor.executemany(
+        """INSERT INTO onet (ONetId, ONetJob, ONetDescription) VALUES (%s, %s, %s)""",
+        values,
+    )
+    conn.commit()
+
+
 def ingest_data(filename: str):
     book = pd.ExcelFile(filename, engine="openpyxl")
     results = {}
@@ -249,5 +266,6 @@ if __name__ == "__main__":
     ingest_ure_responses(conn, sheets["URE Experience"])
     ingest_work_responses(conn, sheets["Work Experience"])
     ingest_criteria(conn, pd.read_csv(DIRPATH + "data/info/profile.csv"))
+    ingest_onet(conn, pd.read_csv(DIRPATH + "data/All_STEM_Occupations.csv"))
 
     conn.close()

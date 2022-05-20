@@ -3,3 +3,4 @@ onet.sublime-project
 onet.sublime-workspace
 .DS_Store
 data/info/~$Data-v03.xlsx
+.env
