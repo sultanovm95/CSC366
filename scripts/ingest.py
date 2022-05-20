@@ -234,6 +234,34 @@ def ingest_accountProfiles(conn, df):
     )
     conn.commit()
 
+def ingest_profileCriteria(conn, df):
+    print("Ingesting profileProfiles")
+    values = []
+    cursor = conn.cursor()
+    criterion = df.keys()[3:]
+
+    #cursor.execute("SELECT CId, cName FROM criteria WHERE cName = '{0}'".format('Work Scheduling Autonomy'))
+    #print(cursor.fetchone())
+
+    counter = 1
+    for criteria in criterion[0::2]:
+        importance = criterion[counter]
+        cursor.execute("SELECT CId FROM criteria WHERE cName = '{0}'".format(criteria))
+        CId = cursor.fetchone()[0]
+        
+        for _, row in df.iterrows():
+            r = tuple([CId, row["Profile Id"], row[criteria], row[importance]])
+            values.append(r)
+
+        counter += 2
+    
+    # --- INSERT INTO THE TABLE and commit changes
+    cursor.executemany(
+        """INSERT INTO profileCriteria (CId, PId, cValue, importanceRating) VALUES (%s, %s, %s, %s)""",
+        values,
+    )
+    conn.commit()
+
 
 def ingest_data(filename: str):
     book = pd.ExcelFile(filename, engine="openpyxl")
@@ -282,5 +310,6 @@ if __name__ == "__main__":
     ingest_criteria(conn, pd.read_csv(DIRPATH + "data/info/profile.csv"))
     ingest_profiles(conn, pd.read_csv(DIRPATH + "data/info/WorkPrefs.csv"))
     ingest_accountProfiles(conn, pd.read_csv(DIRPATH + "data/info/WorkPrefs.csv"))
+    ingest_profileCriteria(conn, pd.read_csv(DIRPATH + "data/info/WorkPrefs.csv"))
 
     conn.close()
