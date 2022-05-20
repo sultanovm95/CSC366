@@ -85,7 +85,7 @@ CREATE TABLE accountProfile (
     PId int,
     FOREIGN KEY (AId) REFERENCES account(id),
     FOREIGN KEY (PId) REFERENCES profile(PId),
-    UNIQUE(AId, PId)
+    PRIMARY KEY (PId)
 );
 
 CREATE TABLE responseProfile (
@@ -93,14 +93,16 @@ CREATE TABLE responseProfile (
     PId int,
     FOREIGN KEY (RId) REFERENCES response(Id),
     FOREIGN KEY (PId) REFERENCES profile(PId),
-    UNIQUE(RId, PId)
+    PRIMARY KEY (RId),
+    UNIQUE(PId)
 );
 
 CREATE TABLE jobProfile (
 	JId int,
-    profileId int,
-    FOREIGN KEY(profileId) REFERENCES profile(PId),
-    PRIMARY KEY(JId)
+    PId int,
+    FOREIGN KEY(PId) REFERENCES profile(PId),
+    PRIMARY KEY(JId),
+    UNIQUE(PId)
 );
 
 CREATE TABLE profileCriteria (
