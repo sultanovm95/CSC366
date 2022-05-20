@@ -1,3 +1,4 @@
+from unicodedata import name
 import pandas as pd
 import MySQLdb
 import secrets
@@ -188,10 +189,11 @@ def ingest_surveys(conn, df):
 
 
 def ingest_criteria(conn, df):
+    print("Ingesting criteria")
     values = []
     cursor = conn.cursor()
 
-    for _, row in df.iloc[1:].iterrows():
+    for _, row in df.iterrows():
         r = tuple(row[["ID", "Characteristc", "Description", "Dimension"]].values)
         values.append(r)
 
@@ -202,11 +204,25 @@ def ingest_criteria(conn, df):
     )
     conn.commit()
 
+def ingest_profiles(conn, df):
+    print("Ingesting profiles")
+    values = []
+    cursor = conn.cursor()
+    for _, row in df.iterrows():
+        r = "Desired"
+        values.append(r)
+    
+    # --- INSERT INTO THE TABLE and commit changes
+    cursor.executemany(
+        """INSERT INTO profile (PType) VALUES (%s)""",
+        values,
+    )
+    conn.commit()
+
 
 def ingest_data(filename: str):
     book = pd.ExcelFile(filename, engine="openpyxl")
     results = {}
-
     for names in book.sheet_names:
         try:
             results[names] = pd.read_excel(book, names).replace(
@@ -248,6 +264,7 @@ if __name__ == "__main__":
     ingest_question_answers(conn, sheets["QuestionResponses"])
     ingest_ure_responses(conn, sheets["URE Experience"])
     ingest_work_responses(conn, sheets["Work Experience"])
+    ingest_profiles(conn, pd.read_csv(DIRPATH + "data/info/desiredProfiles.csv"))
     ingest_criteria(conn, pd.read_csv(DIRPATH + "data/info/profile.csv"))
 
     conn.close()
