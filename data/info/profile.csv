@@ -1,5 +1,5 @@
 ID,Dimension,Characteristc,Description
-1,Task Characteristics,Work Scheduling AutoNnomy,"Work scheduling autonomy means that you are able to determine when, and the order in which, you complete your work tasks without having to check in with a supervisor or coworkers."
+1,Task Characteristics,Work Scheduling Autonomy,"Work scheduling autonomy means that you are able to determine when, and the order in which, you complete your work tasks without having to check in with a supervisor or coworkers."
 2,Task Characteristics,Decision Making Autonomy,Decision making autonomy means that you are able to make decisions about various aspects of your work without having to check in with a supervisor or coworkers.
 3,Task Characteristics,Work Methods Autonomy,Work methods autonomy means that you are able to choose the approach and methods you use for your work without having to check in with a supervisor or coworker.
 4,Task Characteristics,Task Variety,"Task variety means that the work you do involves a lot of different kinds tasks and activities, with relatively little time spent doing the same things over and over."
@@ -22,3 +22,5 @@ ID,Dimension,Characteristc,Description
 21,Work Context,Work Conditions,Work conditions means that the physical setting where you do your job tasks is generally free from uncomfortable or dangerous conditions.
 22,Work Context,Equipment Use,"Equipment use means that, while on the job, your work requires you to use a number of different kinds of equipment to complete your work tasks."
 23,Work Context,Setting,"Work setting can vary in regards to how time is spent between the laboratory (working with reagents and equipment), computers (working with files), fieldwork (collecting samples or making observations in the natural environment) and working with people (teaching, sales, management work)."
+24,Social characteristics,Initiated Interdependence,"Initiated interdependence means that for others to complete their work, including coworkers, depends on you getting your work done first."
+25,Social characteristics,Feedback from Others,"Feedback from others means that, while on the job, coworkers and supervisors provide you with useful information about your work performance."

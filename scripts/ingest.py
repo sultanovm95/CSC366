@@ -1,7 +1,18 @@
+from unicodedata import name
 import pandas as pd
 import MySQLdb
 import secrets
 import numpy as np
+import os
+from dotenv import load_dotenv
+#Loads Enviroment Variables from .env file use command: 'touch .env' to create
+load_dotenv()
+
+#PORT for MYSQL
+PORT = int(os.getenv('PORT'))
+#Either Absolute path to dir, relative path, or nothing
+DIRPATH = os.getenv('DIRPATH')
+DB = os.getenv('MYSQL_DB')
 
 
 def _retrieve_questions(conn, surveyid):
@@ -21,7 +32,6 @@ def _retrieve_questions(conn, surveyid):
 def _check_questions(questions, check):
     for index, d in enumerate(check):
         assert questions.get(d) is not None, f"{index} {d}"
-
 
 def ingest_work_responses(conn, df):
     print("Ingesting WORK responses")
@@ -199,10 +209,11 @@ def ingest_surveys(conn, df):
 
 
 def ingest_criteria(conn, df):
+    print("Ingesting criteria")
     values = []
     cursor = conn.cursor()
 
-    for _, row in df.iloc[1:].iterrows():
+    for _, row in df.iterrows():
         r = tuple(row[["ID", "Characteristc", "Description", "Dimension"]].values)
         values.append(r)
 
@@ -213,11 +224,85 @@ def ingest_criteria(conn, df):
     )
     conn.commit()
 
+def ingest_profiles(conn, df):
+    print("Ingesting profiles")
+    values = []
+    cursor = conn.cursor()
+    for _, row in df.iterrows():
+        r = tuple([row["Profile Id"], row["Profile Name"], 'Desired'])
+        values.append(r)
+    
+    # --- INSERT INTO THE TABLE and commit changes
+    cursor.executemany(
+        """INSERT INTO profile (PId, PName, PType) VALUES (%s, %s, %s)""",
+        values,
+    )
+    conn.commit()
+
+def ingest_accountProfiles(conn, df):
+    print("Ingesting accountProfiles")
+    values = []
+    cursor = conn.cursor()
+    for _, row in df.iterrows():
+        r = tuple(row[["User", "Profile Id"]].values)
+        values.append(r)
+    
+    # --- INSERT INTO THE TABLE and commit changes
+    cursor.executemany(
+        """INSERT INTO accountProfile (AId, PId) VALUES (%s, %s)""",
+        values,
+    )
+    conn.commit()
+
+def ingest_profileCriteria(conn, df):
+    print("Ingesting profileProfiles")
+    values = []
+    cursor = conn.cursor()
+    criterion = df.keys()[3:]
+
+    #cursor.execute("SELECT CId, cName FROM criteria WHERE cName = '{0}'".format('Work Scheduling Autonomy'))
+    #print(cursor.fetchone())
+
+    counter = 1
+    for criteria in criterion[0::2]:
+        importance = criterion[counter]
+        cursor.execute("SELECT CId FROM criteria WHERE cName = '{0}'".format(criteria))
+        CId = cursor.fetchone()[0]
+        
+        for _, row in df.iterrows():
+            r = tuple([CId, row["Profile Id"], row[criteria], row[importance]])
+            values.append(r)
+
+        counter += 2
+    
+    # --- INSERT INTO THE TABLE and commit changes
+    cursor.executemany(
+        """INSERT INTO profileCriteria (CId, PId, cValue, importanceRating) VALUES (%s, %s, %s, %s)""",
+        values,
+    )
+    conn.commit()
+
+
+def ingest_onet(conn, df):
+    print("Ingesting ONet")
+    values = []
+    cursor = conn.cursor()
+    
+    for _, row in df.iloc[1:].iterrows():
+        r = tuple(row[["Code", "Occupation", "Occupation Types"]].values)
+        values.append(r)
+        
+    # --- INSERT INTO THE TABLE and commit changes
+    cursor.executemany(
+        """INSERT INTO onet (ONetId, ONetJob, ONetDescription) VALUES (%s, %s, %s)""",
+        values,
+    )
+    conn.commit()
+
 
 def ingest_data(filename: str):
     book = pd.ExcelFile(filename, engine="openpyxl")
     results = {}
-
     for names in book.sheet_names:
         try:
             results[names] = pd.read_excel(book, names).replace(
@@ -228,7 +313,7 @@ def ingest_data(filename: str):
     return results
 
 
-def drop_tables(conn, file_path="../sql/CLEANUP.sql"):
+def drop_tables(conn, file_path= DIRPATH + "sql/CLEANUP.sql"):
     with open(file_path) as cleanup:
         drop = cleanup.read()
         cursor = conn.cursor()
@@ -236,7 +321,7 @@ def drop_tables(conn, file_path="../sql/CLEANUP.sql"):
     print("Dropped Tables")
 
 
-def build_tables(conn, file_path="../sql/SETUP.sql"):
+def build_tables(conn, file_path= DIRPATH + "sql/SETUP.sql"):
     with open(file_path) as cleanup:
         tables = cleanup.read()
         cursor = conn.cursor()
@@ -245,12 +330,12 @@ def build_tables(conn, file_path="../sql/SETUP.sql"):
 
 
 if __name__ == "__main__":
-    conn = MySQLdb.connect(host="127.0.0.1", port=12345, user="root", database="temp")
+    conn = MySQLdb.connect(host="127.0.0.1", port=PORT, user="root", database=DB)
     drop_tables(conn)
     build_tables(conn)
 
     sheets = ingest_data(
-        "../data/info/Data-v03.xlsx",
+        DIRPATH + "data/info/Data-v03.xlsx",
     )
 
     ingest_surveys(conn, sheets["Surveys"])
@@ -259,5 +344,10 @@ if __name__ == "__main__":
     ingest_question_answers(conn, sheets["QuestionResponses"])
     ingest_ure_responses(conn, sheets["URE Experience"])
     ingest_work_responses(conn, sheets["Work Experience"])
+    ingest_criteria(conn, pd.read_csv(DIRPATH + "data/info/profile.csv"))
+    ingest_profiles(conn, pd.read_csv(DIRPATH + "data/info/WorkPrefs.csv"))
+    ingest_accountProfiles(conn, pd.read_csv(DIRPATH + "data/info/WorkPrefs.csv"))
+    ingest_profileCriteria(conn, pd.read_csv(DIRPATH + "data/info/WorkPrefs.csv"))
+    ingest_onet(conn, pd.read_csv(DIRPATH + "data/All_STEM_Occupations.csv"))
 
     conn.close()

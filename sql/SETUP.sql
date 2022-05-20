@@ -60,6 +60,8 @@ CREATE TABLE answers (
 
 CREATE TABLE profile (
 	PId int,
+    PType ENUM('Desired', 'ONET', 'Experience'),
+    PName VARCHAR(255),
     PRIMARY KEY (PId)
 );
 
@@ -72,16 +74,19 @@ CREATE TABLE criteria (
 );
 
 CREATE TABLE onet (
-	ONId int,
-    ODescription VARCHAR(255) NOT NULL,
-    PRIMARY KEY(ONId)
+	ONetId VARCHAR(255),
+    ONetJob VARCHAR(255) NOT NULL,
+    ONetDescription VARCHAR(255) NOT NULL,
+    PRIMARY KEY(ONetId)
 );
 
-CREATE TABLE feautures (
+/*
+CREATE TABLE features (
 	FId int,
     featuredValue VARCHAR(255) NOT NULL,
     PRIMARY KEY(FId)
 );
+*/
 
 CREATE TABLE accountProfile (
 	AId int,
@@ -107,33 +112,23 @@ CREATE TABLE jobProfile (
     PRIMARY KEY(JId)
 );
 
+/*
 CREATE TABLE jobFeatures (
-	ONId int,
+	ONetId VARCHAR(255),
     FeaturedId int,
-    FOREIGN KEY (ONId) REFERENCES onet(ONId),
-    FOREIGN KEY (FeaturedId) REFERENCES feautures(FId),
-    UNIQUE(ONId, FeaturedId)
+    FOREIGN KEY (ONetId) REFERENCES onet(ONetId),
+    FOREIGN KEY (FeaturedId) REFERENCES features(FId),
+    UNIQUE(ONetId, FeaturedId)
 );
+*/
 
-CREATE TABLE desiredProfileCriteria (
+CREATE TABLE profileCriteria (
 	CId int,
+    PId int,
+    cValue int NOT NULL,
     importanceRating int NOT NULL,
-    FOREIGN KEY (CId) REFERENCES criteria(CId)
-);
-
-CREATE TABLE oNETProfileCriteria (
-	PId int,
-	CId int,
-    value int,
+    FOREIGN KEY (CId) REFERENCES criteria(CId),
     FOREIGN KEY (PId) REFERENCES profile(PId),
-    FOREIGN KEY (CId) REFERENCES criteria(CId)
-);
-
-CREATE TABLE surveyProfileCriteria (
-	PId int,
-	CId int,
-    value int,
-    FOREIGN KEY (PId) REFERENCES profile(PId),
-    FOREIGN KEY (CId) REFERENCES criteria(CId)
+    PRIMARY Key(PId, CId)
 );
 
