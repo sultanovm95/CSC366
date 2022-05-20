@@ -3,50 +3,63 @@ import MySQLdb
 import secrets
 import numpy as np
 
-sheet_ingest_func = {
-    "Surveys": 0,
-    "Users": 0,
-    "Survey Questions New": 0,
-    "QuestionResponses": 0,
-    "URE Experience": 0,
-    "Work Experience": 0,
-    "Work Profile": 0,
-    "Work Preferences": 0,
-}
+
+def _retrieve_questions(conn, surveyid):
+    cursor = conn.cursor()
+    questions = {}
+
+    cursor.execute(
+        f"SELECT id, surveyid, question FROM question WHERE surveyid = {surveyid}"
+    )
+    result = cursor.fetchall()
+    for q in result:
+        questions[q[2].lower()] = q[0]
+    # print(questions)
+    return questions
+
+
+def _check_questions(questions, check):
+    for index, d in enumerate(check):
+        assert questions.get(d) is not None, f"{index} {d}"
 
 
 def ingest_work_responses(conn, df):
     print("Ingesting WORK responses")
     responses = []
     answers = []
+
     cursor = conn.cursor()
+    questions = _retrieve_questions(conn, 2)
+    q = []
 
     for i, row in df.iterrows():
-        if i == 0:
-            continue
         # remove empty cells from dataframe
         if set(row.values) == {"NULL"}:
             break
         r = row[:91]
+        if i == 0:
+            q = r[2:].apply(lambda x: x.replace("\n", "").lower()).values
+            _check_questions(questions, q)
+            continue
 
         # insert response
         response_num = int(r[0].lower().replace(" ", "").replace("fakecase", ""))
         response = (response_num, int(r[1]), 2)
-        print(response)
+        # print(response)
         responses.append(response)
 
-        # if r["QuestionId"] == "NULL":
-        #     break
-
-        # r["QuestionId"] = int(r["QuestionId"])
-        # r["Survey"] = int(r["Survey"])
-        # r["ResponseValue"] = int(r["ResponseValue"])
-        # values.append(tuple(r.values))
+        for i in range(len(r[2:])):
+            ans = (questions[q[i]], response_num, r[i + 2])
+            answers.append(ans)
 
     # --- INSERT INTO THE TABLE and commit changes
     cursor.executemany(
         """INSERT INTO response (Id, UserId, SurveyId, AnswerDate) VALUES (%s, %s, %s, NOW())""",
         responses,
+    )
+    cursor.executemany(
+        """INSERT INTO answers (QuestionId, ResponseId, AnswerValue) VALUES (%s, %s, %s)""",
+        answers,
     )
     conn.commit()
 
@@ -55,34 +68,40 @@ def ingest_ure_responses(conn, df):
     print("Ingesting URE responses")
     responses = []
     answers = []
+
     cursor = conn.cursor()
+    questions = _retrieve_questions(conn, 1)
+    q = []
 
     for i, row in df.iterrows():
-        if i == 0:
-            continue
         # remove empty cells from dataframe
         if set(row.values) == {"NULL"}:
             break
         r = row[:96]
+        if i == 0:
+            q = r[2:].apply(lambda x: x.replace("\n", "").lower()).values
+            _check_questions(questions, q)
+            continue
 
         # insert response
         response_num = int(r[0].lower().replace(" ", "").replace("fakecase", ""))
         response = (response_num, int(r[1]), 1)
-        print(response)
         responses.append(response)
 
-        # if r["QuestionId"] == "NULL":
-        #     break
-
-        # r["QuestionId"] = int(r["QuestionId"])
-        # r["Survey"] = int(r["Survey"])
-        # r["ResponseValue"] = int(r["ResponseValue"])
-        # values.append(tuple(r.values))
+        # insert answers
+        for i in range(len(r[2:])):
+            ans = (questions[q[i]], response_num, r[i + 2])
+            answers.append(ans)
 
     # --- INSERT INTO THE TABLE and commit changes
     cursor.executemany(
         """INSERT INTO response (Id, UserId, SurveyId, AnswerDate) VALUES (%s, %s, %s, NOW())""",
         responses,
+    )
+
+    cursor.executemany(
+        """INSERT INTO answers (QuestionId, ResponseId, AnswerValue) VALUES (%s, %s, %s)""",
+        answers,
     )
     conn.commit()
 
@@ -132,6 +151,7 @@ def ingest_questions(conn, df):
             break
         r["QuestionId"] = int(r["QuestionId"])
         r["Survey"] = int(r["Survey"])
+        r["Question"] = r["Question"].replace("\n", "")
         assert r["Survey"] in (1, 2)
         values.append(tuple(r.values))
 
