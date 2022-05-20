@@ -50,12 +50,12 @@ CREATE TABLE response (
 );
 
 CREATE TABLE answers (
-	Id int,
-    QuestionId int,
+	QuestionId int,
     ResponseId int,
     AnswerValue VARCHAR(255) NOT NULL,
-    PRIMARY KEY (Id, QuestionId, ResponseId),
-    FOREIGN KEY (QuestionId) REFERENCES question(Id)
+    PRIMARY KEY (QuestionId, ResponseId),
+    FOREIGN KEY (QuestionId) REFERENCES question(Id),
+    FOREIGN KEY (ResponseId) REFERENCES response(Id)
 );
 
 CREATE TABLE profile (
