@@ -60,7 +60,7 @@ CREATE TABLE answers (
 
 CREATE TABLE profile (
 	PId int,
-    PType VARCHAR(255),
+    PType ENUM('Desired', 'ONET', 'Experience'),
     PName VARCHAR(255),
     PRIMARY KEY (PId)
 );
@@ -79,11 +79,13 @@ CREATE TABLE onet (
     PRIMARY KEY(ONId)
 );
 
+/*
 CREATE TABLE features (
 	FId int,
     featuredValue VARCHAR(255) NOT NULL,
     PRIMARY KEY(FId)
 );
+*/
 
 CREATE TABLE accountProfile (
 	AId int,
@@ -109,6 +111,7 @@ CREATE TABLE jobProfile (
     PRIMARY KEY(JId)
 );
 
+/*
 CREATE TABLE jobFeatures (
 	ONId int,
     FeaturedId int,
@@ -116,6 +119,7 @@ CREATE TABLE jobFeatures (
     FOREIGN KEY (FeaturedId) REFERENCES features(FId),
     UNIQUE(ONId, FeaturedId)
 );
+*/
 
 CREATE TABLE profileCriteria (
 	CId int,
