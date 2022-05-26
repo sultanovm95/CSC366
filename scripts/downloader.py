@@ -9,7 +9,7 @@ from multiprocessing import Pool
 ssl._create_default_https_context = ssl._create_unverified_context
 
 
-def download_csv(url, path="../data/criteria"):
+def download_csv(criteria, url, path="../data/criteria"):
     filename = url.split("/")[-1]
     filename = filename.replace("?fmt=csv", "")
 
@@ -19,20 +19,22 @@ def download_csv(url, path="../data/criteria"):
     print(url)
 
     page = requests.get(url)
-    with open(f"{path}/{filename}", "wb") as f:
+    with open(f"{path}/<{criteria}>{filename}", "wb") as f:
         f.write(page.content)
 
 
 def get_url(page_url):
-    page = requests.get(page_url)
+    criteria, url = page_url
+
+    page = requests.get(url)
     soup = BeautifulSoup(page.content, "html.parser")
     csv_url = soup.find({"h2": {"class": "reportdesc"}}).find_all(
         {"a": {"class": "ms-2"}}
     )[1]["href"]
 
     csv_url = "https://www.onetonline.org" + csv_url
-    print(csv_url)
-    # download_csv(csv_url)
+    print(criteria, csv_url)
+    download_csv(criteria, csv_url)
 
 
 def retrieve_links(filename: str):
@@ -44,9 +46,10 @@ def retrieve_links(filename: str):
 
     for r in range(1, ws.max_row + 1):
         for c in range(1, ws.max_column + 1):
+            criteria = ws.cell(row=r, column=1).value
             hyperlink = ws.cell(row=r, column=c).hyperlink
-            if hyperlink is not None:
-                urls.append(hyperlink.target)
+            if hyperlink is not None and criteria is not None:
+                urls.append((criteria, hyperlink.target))
     pprint.pprint(urls)
     return urls
 
@@ -58,5 +61,5 @@ if __name__ == "__main__":
 
     print(f"Number of URLs: {len(urls)}")
 
-    with Pool(5) as p:
+    with Pool(10) as p:
         p.map(get_url, urls)
