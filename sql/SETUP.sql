@@ -39,14 +39,32 @@ CREATE TABLE questionAcceptableAnswer (
     FOREIGN KEY (SurveyId) REFERENCES survey(Id)
 );
 
+CREATE TABLE profile (
+    PId int,
+    PType ENUM('Desired', 'ONET', 'Experience'),
+    PName VARCHAR(255),
+    PRIMARY KEY (PId)
+);
+
 CREATE TABLE response (
 	Id int,
     UserId int,
     SurveyId int,
+    SurveyProfile int,
     AnswerDate DATE,
     PRIMARY KEY (Id),
     FOREIGN KEY (UserId) REFERENCES account(Id),
-    FOREIGN KEY (SurveyId) REFERENCES survey(Id)
+    FOREIGN KEY (SurveyId) REFERENCES survey(Id),
+    FOREIGN KEY (SurveyId) REFERENCES profile(PId)
+);
+
+CREATE TABLE onet (
+    ONetId VARCHAR(255),
+    ONetJob VARCHAR(255) NOT NULL,
+    ONetProfile int,
+    ONetDescription VARCHAR(255) NOT NULL,
+    PRIMARY KEY(ONetId),
+    FOREIGN KEY (ONetProfile) REFERENCES profile(PId)
 );
 
 CREATE TABLE answers (
@@ -58,13 +76,6 @@ CREATE TABLE answers (
     FOREIGN KEY (ResponseId) REFERENCES response(Id)
 );
 
-CREATE TABLE profile (
-	PId int,
-    PType ENUM('Desired', 'ONET', 'Experience'),
-    PName VARCHAR(255),
-    PRIMARY KEY (PId)
-);
-
 CREATE TABLE criteria (
     CId int,
 	cName VARCHAR(255),
@@ -73,36 +84,12 @@ CREATE TABLE criteria (
     PRIMARY KEY(CId)
 );
 
-CREATE TABLE onet (
-	ONetId VARCHAR(255),
-    ONetJob VARCHAR(255) NOT NULL,
-    ONetDescription VARCHAR(255) NOT NULL,
-    PRIMARY KEY(ONetId)
-);
-
 CREATE TABLE accountProfile (
-	AId int,
+    AId int,
     PId int,
     FOREIGN KEY (AId) REFERENCES account(id),
     FOREIGN KEY (PId) REFERENCES profile(PId),
     PRIMARY KEY (PId)
-);
-
-CREATE TABLE responseProfile (
-	RId int,
-    PId int,
-    FOREIGN KEY (RId) REFERENCES response(Id),
-    FOREIGN KEY (PId) REFERENCES profile(PId),
-    PRIMARY KEY (RId),
-    UNIQUE(PId)
-);
-
-CREATE TABLE jobProfile (
-	JId int,
-    PId int,
-    FOREIGN KEY(PId) REFERENCES profile(PId),
-    PRIMARY KEY(JId),
-    UNIQUE(PId)
 );
 
 CREATE TABLE profileCriteria (

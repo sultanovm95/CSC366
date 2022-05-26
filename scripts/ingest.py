@@ -1,10 +1,11 @@
-from unicodedata import name
+from pprint import pprint
 import pandas as pd
 import MySQLdb
 import secrets
 import numpy as np
 import os
 from dotenv import load_dotenv
+import math
 
 # Loads Enviroment Variables from .env file use command: 'touch .env' to create
 load_dotenv()
@@ -56,8 +57,7 @@ def ingest_work_responses(conn, df):
 
         # insert response
         response_num = int(r[0].lower().replace(" ", "").replace("fakecase", ""))
-        response = (response_num, int(r[1]), 2)
-        # print(response)
+        response = (response_num, int(r[1]), 2, response_num + 50)
         responses.append(response)
 
         for i in range(len(r[2:])):
@@ -66,7 +66,7 @@ def ingest_work_responses(conn, df):
 
     # --- INSERT INTO THE TABLE and commit changes
     cursor.executemany(
-        """INSERT INTO response (Id, UserId, SurveyId, AnswerDate) VALUES (%s, %s, %s, NOW())""",
+        """INSERT INTO response (Id, UserId, SurveyId, SurveyProfile, AnswerDate) VALUES (%s, %s, %s, %s, NOW())""",
         responses,
     )
     cursor.executemany(
@@ -97,7 +97,7 @@ def ingest_ure_responses(conn, df):
 
         # insert response
         response_num = int(r[0].lower().replace(" ", "").replace("fakecase", ""))
-        response = (response_num, int(r[1]), 1)
+        response = (response_num, int(r[1]), 1, response_num + 50)
         responses.append(response)
 
         # insert answers
@@ -107,7 +107,7 @@ def ingest_ure_responses(conn, df):
 
     # --- INSERT INTO THE TABLE and commit changes
     cursor.executemany(
-        """INSERT INTO response (Id, UserId, SurveyId, AnswerDate) VALUES (%s, %s, %s, NOW())""",
+        """INSERT INTO response (Id, UserId, SurveyId, SurveyProfile, AnswerDate) VALUES (%s, %s, %s, %s, NOW())""",
         responses,
     )
 
@@ -228,17 +228,62 @@ def ingest_criteria(conn, df):
 
 
 def ingest_profiles(conn, df):
-    print("Ingesting profiles")
+    print("Ingesting desired profiles")
     values = []
     cursor = conn.cursor()
     for _, row in df.iterrows():
-        r = tuple([row["Profile Id"], row["Profile Name"], "Desired"])
+        r = (row["Profile Id"], row["Profile Name"], "Desired")
         values.append(r)
 
     # --- INSERT INTO THE TABLE and commit changes
     cursor.executemany(
         """INSERT INTO profile (PId, PName, PType) VALUES (%s, %s, %s)""",
         values,
+    )
+    conn.commit()
+
+
+def ingest_work_profiles(conn, df):
+    print("Ingesting work profiles")
+    values = []
+    profile = []
+    cursor = conn.cursor()
+    criteria = {}
+
+    cursor.execute("SELECT CId, cName FROM criteria;")
+    result = cursor.fetchall()
+    for r in result:
+        criteria[r[1].lower().strip()] = r[0]
+    # pprint(criteria)
+
+    pid = 51
+    for i, row in df.iterrows():
+        if i == 0:
+            continue
+        if row["Items"] == "NULL":
+            break
+        r = (pid, row["Items"], "Experience")
+        values.append(r)
+
+        for _r in row.iteritems():
+            c = _r[0]
+            if c == "Items":
+                continue
+            c = criteria[c.lower().strip()]
+            val = math.ceil(float(_r[1]))
+            assert 0 <= val <= 7
+            profile.append((c, pid, val))
+
+        pid += 1
+
+    # --- INSERT INTO THE TABLE and commit changes
+    cursor.executemany(
+        """INSERT INTO profile (PId, PName, PType) VALUES (%s, %s, %s)""",
+        values,
+    )
+    cursor.executemany(
+        """INSERT INTO profileCriteria (CId, PId, cValue, importanceRating) VALUES (%s, %s, %s, 4)""",
+        profile,
     )
     conn.commit()
 
@@ -343,16 +388,22 @@ if __name__ == "__main__":
         DIRPATH + "data/info/Data-v03.xlsx",
     )
 
-    ingest_surveys(conn, sheets["Surveys"])
+    workprefs = pd.read_csv(DIRPATH + "data/info/WorkPrefs.csv")
+    profiles = pd.read_csv(DIRPATH + "data/info/profile.csv")
+    onet = pd.read_csv(DIRPATH + "data/info/All_STEM_Occupations.csv")
+
+    ingest_profiles(conn, workprefs)
+    ingest_criteria(conn, profiles)
+    ingest_profileCriteria(conn, workprefs)
     ingest_users(conn, sheets["Users"])
+    ingest_accountProfiles(conn, workprefs)
+    ingest_work_profiles(conn, sheets["Work Profile"])
+    ingest_surveys(conn, sheets["Surveys"])
     ingest_questions(conn, sheets["Survey Questions New"])
     ingest_question_answers(conn, sheets["QuestionResponses"])
     ingest_ure_responses(conn, sheets["URE Experience"])
     ingest_work_responses(conn, sheets["Work Experience"])
-    ingest_criteria(conn, pd.read_csv(DIRPATH + "data/info/profile.csv"))
-    ingest_profiles(conn, pd.read_csv(DIRPATH + "data/info/WorkPrefs.csv"))
-    ingest_accountProfiles(conn, pd.read_csv(DIRPATH + "data/info/WorkPrefs.csv"))
-    ingest_profileCriteria(conn, pd.read_csv(DIRPATH + "data/info/WorkPrefs.csv"))
-    ingest_onet(conn, pd.read_csv(DIRPATH + "data/All_STEM_Occupations.csv"))
+
+    ingest_onet(conn, onet)
 
     conn.close()
