@@ -227,7 +227,7 @@ def ingest_criteria(conn, df):
     conn.commit()
 
 
-def ingest_profiles(conn, df):
+def ingest_desired_profiles(conn, df):
     print("Ingesting desired profiles")
     values = []
     cursor = conn.cursor()
@@ -304,14 +304,11 @@ def ingest_accountProfiles(conn, df):
     conn.commit()
 
 
-def ingest_profileCriteria(conn, df):
+def ingest_desired_profileCriteria(conn, df):
     print("Ingesting profileProfiles")
-    values = []
+    desiredProfiles = []
     cursor = conn.cursor()
     criterion = df.keys()[3:]
-
-    # cursor.execute("SELECT CId, cName FROM criteria WHERE cName = '{0}'".format('Work Scheduling Autonomy'))
-    # print(cursor.fetchone())
 
     counter = 1
     for criteria in criterion[0::2]:
@@ -321,14 +318,14 @@ def ingest_profileCriteria(conn, df):
 
         for _, row in df.iterrows():
             r = tuple([CId, row["Profile Id"], row[criteria], row[importance]])
-            values.append(r)
+            desiredProfiles.append(r)
 
         counter += 2
 
     # --- INSERT INTO THE TABLE and commit changes
     cursor.executemany(
         """INSERT INTO profileCriteria (CId, PId, cValue, importanceRating) VALUES (%s, %s, %s, %s)""",
-        values,
+        desiredProfiles,
     )
     conn.commit()
 
@@ -336,19 +333,38 @@ def ingest_profileCriteria(conn, df):
 def ingest_onet(conn, df):
     print("Ingesting ONet")
     values = []
+    profiles = []
     cursor = conn.cursor()
 
+    cursor.execute("select max(PId) FROM profile")
+    PId = cursor.fetchone()[0]
+    
     for _, row in df.iloc[1:].iterrows():
-        r = tuple(row[["Code", "Occupation", "Occupation Types"]].values)
+        PId += 1
+        r = tuple([row["Code"], row["Occupation"], row["Occupation Types"], PId])
+        p = tuple([PId, row["Occupation"], "ONET"])
+
+        #r = tuple(row[["Code", "Occupation", "Occupation Types"]].values)
+        profiles.append(p)
         values.append(r)
 
+    cursor.executemany(
+        """INSERT INTO profile (PId, PName, PType) VALUES (%s, %s, %s)""",
+        profiles
+    )
     # --- INSERT INTO THE TABLE and commit changes
     cursor.executemany(
-        """INSERT INTO onet (ONetId, ONetJob, ONetDescription) VALUES (%s, %s, %s)""",
+        """INSERT INTO onet (ONetId, ONetJob, ONetDescription, ONetProfile) VALUES (%s, %s, %s, %s)""",
         values,
     )
     conn.commit()
 
+def ingest_onetProfileCriteria(conn, filename:str):
+    book = pd.ExcelFile(filename, engine="openpyxl")
+    ws = pd.read_excel(book, "Sheet1")
+    print(ws)
+    for row in ws:
+        print (row)
 
 def ingest_data(filename: str):
     book = pd.ExcelFile(filename, engine="openpyxl")
@@ -391,10 +407,12 @@ if __name__ == "__main__":
     workprefs = pd.read_csv(DIRPATH + "data/info/WorkPrefs.csv")
     profiles = pd.read_csv(DIRPATH + "data/info/profile.csv")
     onet = pd.read_csv(DIRPATH + "data/info/All_STEM_Occupations.csv")
+    onetMapping = DIRPATH + "data/info/O-Net Computer Science Template for Survey_5_13_2022.xlsx"
 
-    ingest_profiles(conn, workprefs)
+
+    ingest_desired_profiles(conn, workprefs)
     ingest_criteria(conn, profiles)
-    ingest_profileCriteria(conn, workprefs)
+    ingest_desired_profileCriteria(conn, workprefs)
     ingest_users(conn, sheets["Users"])
     ingest_accountProfiles(conn, workprefs)
     ingest_work_profiles(conn, sheets["Work Profile"])
@@ -403,7 +421,7 @@ if __name__ == "__main__":
     ingest_question_answers(conn, sheets["QuestionResponses"])
     ingest_ure_responses(conn, sheets["URE Experience"])
     ingest_work_responses(conn, sheets["Work Experience"])
-
     ingest_onet(conn, onet)
+    ingest_onetProfileCriteria(conn, onetMapping)
 
     conn.close()

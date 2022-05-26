@@ -1,7 +1,6 @@
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS jobProfile;
 DROP TABLE IF EXISTS profileCriteria;
-DROP TABLE IF EXISTS surveyResponse;
 DROP TABLE IF EXISTS account;
 DROP TABLE IF EXISTS survey;
 DROP TABLE IF EXISTS questionAcceptableAnswer;
@@ -19,6 +18,8 @@ DROP TABLE IF EXISTS feautures;
 DROP TABLE IF EXISTS oNETProfileCriteria;
 DROP TABLE IF EXISTS desiredProfileCriteria;
 DROP TABLE IF EXISTS surveyProfileCriteria;
+DROP TABLE IF EXISTS surveyResponse;
+
 -- Prof told us to remove and just redirect to page
 -- Move some of the meta data that would go here to onet table
 DROP TABLE IF EXISTS features;
