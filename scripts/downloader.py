@@ -19,7 +19,7 @@ def download_csv(criteria, url, path="../data/criteria"):
     print(url)
 
     page = requests.get(url)
-    with open(f"{path}/<{criteria}>{filename}", "wb") as f:
+    with open(f"{path}/+{criteria}+{filename}", "wb") as f:
         f.write(page.content)
 
 
