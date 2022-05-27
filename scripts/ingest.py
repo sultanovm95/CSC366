@@ -1,5 +1,3 @@
-from pprint import pprint
-from typing import Tuple
 import pandas as pd
 import MySQLdb
 import secrets
@@ -361,57 +359,23 @@ def ingest_onet(conn, df):
     )
     conn.commit()
 
-def ingest_onetProfileCriteria(conn):
-    criteria = []
+def ingest_ONet_Profile_Critiera(conn, df):
+    print("Ingesting ONet Job Criteria")
+
     values = []
     cursor = conn.cursor()
-    jobs = conn.cursor()
 
-    for file in glob.glob(DIRPATH + "data/criteria/*.csv"):
-        fn = file.split("+")[1]
-        #name = " ".join(fn.split("(")[0].split("-"))
-        criteria.append(fn)
-
-    criteria = list(set(criteria))
-    jobs.execute("select ONetId, ONetJob, ONetProfile from onet")
-
-    c = "Decision-Making Autonomy"
-    cName = " ".join(c.split("(")[0].split("-"))
-    cursor.execute("SELECT CId FROM criteria WHERE cName = '{0}'".format(cName))
-    CId = cursor.fetchone()[0]
-    csvFiles = glob.glob(DIRPATH + "data/criteria/+{0}+*.csv".format(c))
-    for job in jobs:
-        val = 0
-        jobC = job[0]
-        jobP = job[2]
-
-        for file in csvFiles:
-            df = pd.read_csv(file)
-            rows = df.iterrows()
-            for _, row in rows:
-                if (row["Code"] == jobC):
-                    val += row[0]
-        r = tuple([CId, jobP, val, 4])
+    for _, row in df.iterrows():
+        r = tuple(row[["CId", "PId", "cValue", "importanceRating"]].values)
         values.append(r)
-        print(r)
 
-    #for c in criteria:
-    #    for file in glob.glob(DIRPATH + "data/criteria/+{0}+*.csv".format(c)):
-    #        df = pd.read_csv(file)
-    #       for job in cursor:
-    #            jobCode = job[0]
-    #           jobProfile = job[2]
-    #            for _, row in df.iterrows():
-    #                print(row["Code"])
-
-            #for _, row in df.iloc[1:].iterrows():
-               #print(row)
-    #cursor.executemany(
-    #    """INSERT INTO profileCriteria (CId, PId, cValue, importanceRating) VALUES (%s, %s, %s, %s)""",
-    #    values,
-    #)
+    cursor.executemany(
+        """INSERT INTO profileCriteria (CId, PId, cValue, importanceRating) VALUES (%s, %s, %s, %s)""",
+        values,
+    )
 
     conn.commit()
+
 
 def ingest_data(filename: str):
     book = pd.ExcelFile(filename, engine="openpyxl")
@@ -454,6 +418,7 @@ if __name__ == "__main__":
     workprefs = pd.read_csv(DIRPATH + "data/info/WorkPrefs.csv")
     profiles = pd.read_csv(DIRPATH + "data/info/profile.csv")
     onet = pd.read_csv(DIRPATH + "data/info/All_STEM_Occupations.csv")
+    onetProfileCriteria = pd.read_csv(DIRPATH + "data/info/OnetProfileCriteria.csv")
 
     ingest_desired_profiles(conn, workprefs)
     ingest_criteria(conn, profiles)
@@ -467,6 +432,6 @@ if __name__ == "__main__":
     ingest_ure_responses(conn, sheets["URE Experience"])
     ingest_work_responses(conn, sheets["Work Experience"])
     ingest_onet(conn, onet)
-    ingest_onetProfileCriteria(conn)
+    ingest_ONet_Profile_Critiera(conn, onetProfileCriteria)
 
     conn.close()
