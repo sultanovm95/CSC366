@@ -366,7 +366,7 @@ def ingest_ONet_Profile_Critiera(conn, df):
     cursor = conn.cursor()
 
     for _, row in df.iterrows():
-        r = tuple(row[["CId", "PId", "cValue", "importanceRating"]].values)
+        r = tuple([row["CId"], row["PId"], math.ceil((float(row["cValue"]) / 100) * 7), row["importanceRating"]])
         values.append(r)
 
     cursor.executemany(
@@ -375,7 +375,6 @@ def ingest_ONet_Profile_Critiera(conn, df):
     )
 
     conn.commit()
-
 
 def ingest_data(filename: str):
     book = pd.ExcelFile(filename, engine="openpyxl")
