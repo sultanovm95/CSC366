@@ -1,16 +1,28 @@
 from flask import Flask
 from flask_mysqldb import MySQL
+import os
+from dotenv import load_dotenv
+
 
 app = Flask(__name__)
 mysql = MySQL(app)
 
 app = Flask(__name__)
 
+
+# Loads Enviroment Variables from .env file use command: 'touch .env' to create
+load_dotenv()
+# need to have the following variables in .env file by name
+USER = os.getenv("USER")
+PASSWORD = os.getenv("PASSWORD")
+PORT = int(os.getenv("PORT"))
+DB = os.getenv("MYSQL_DB")
+
 app.config.setdefault("MYSQL_HOST", "localhost")
-app.config.setdefault("MYSQL_USER", "")
-app.config.setdefault("MYSQL_PASSWORD", "")
-app.config.setdefault("MYSQL_DB", None)
-app.config.setdefault("MYSQL_PORT", 3306)
+app.config.setdefault("MYSQL_USER", USER)
+app.config.setdefault("MYSQL_PASSWORD", PASSWORD)
+app.config.setdefault("MYSQL_DB", DB )
+app.config.setdefault("MYSQL_PORT", PORT)
 app.config.setdefault("MYSQL_UNIX_SOCKET", None)
 app.config.setdefault("MYSQL_CONNECT_TIMEOUT", 10)
 app.config.setdefault("MYSQL_READ_DEFAULT_FILE", None)
