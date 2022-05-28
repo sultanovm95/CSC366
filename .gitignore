@@ -5,3 +5,4 @@ onet.sublime-workspace
 data/info/~$Data-v03.xlsx
 CSC366
 .env
+src/utils/__pycache__

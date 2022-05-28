@@ -5,12 +5,20 @@ import numpy as np
 
 
 def _cossim(s, w):
+    size = max(len(s), len(w))
+    s = _reshape_vector(s, size)
+    w = _reshape_vector(w, size)
+
     return np.sum(s * w) / (
         np.sqrt(np.sum(np.square(s))) * np.sqrt(np.sum(np.square(w)))
     )
 
 
 def _pearson(s, w):
+    size = max(len(s), len(w))
+    s = _reshape_vector(s, size)
+    w = _reshape_vector(w, size)
+
     _s_mean = np.mean(s)
     _w_mean = np.mean(w)
     return np.sum((s - _s_mean) * (w - _w_mean)) / (
@@ -20,9 +28,17 @@ def _pearson(s, w):
 
 
 def _weightcos(s, v, w):
+    size = max(len(s), len(w))
+    s = _reshape_vector(s, size)
+    w = _reshape_vector(w, size)
+
     return np.sum(s * v * w) / (
         np.sqrt(np.sum(np.square(s))) * np.sqrt(np.sum(np.square(w))) * np.sum(v)
     )
+
+
+def _reshape_vector(v, size):
+    return np.resize(np.array(v), size)
 
 
 def vectorize(group):
@@ -49,15 +65,29 @@ def match_jobs(index, job, other_jobs, limit=10):
         _vals, _importance = other_jobs[i]
         results.append((i, _cossim(values, _vals)))
     results.sort(key=lambda x: x[1], reverse=True)
-    return results[:10]
+    return results[:limit]
 
 
-def match_desired_onet(job, other_jobs, limit=10):
-    pass
+def match_desired_onet(job, onet_jobs, limit=10):
+    results = []
+    values, importance = job
+
+    for i in onet_jobs:
+        _vals, _ = onet_jobs[i]
+        results.append((i, _weightcos(values, importance, _vals)))
+    results.sort(key=lambda x: x[1], reverse=True)
+    return results[:limit]
 
 
 def match_exp_onet(job, onet_jobs, limit=10):
-    pass
+    results = []
+    values, importance = job
+
+    for i in onet_jobs:
+        _vals, _importance = onet_jobs[i]
+        results.append((i, _cossim(values, _vals)))
+    results.sort(key=lambda x: x[1], reverse=True)
+    return results[:limit]
 
 
 if __name__ == "__main__":
@@ -65,7 +95,7 @@ if __name__ == "__main__":
     cursor = conn.cursor()
 
     cursor.execute(
-        """ SELECT Id, UserId, SurveyId, SurveyProfile, PType, CId, cValue, ImportanceRating FROM response, profile, profileCriteria WHERE response.SurveyProfile = profile.PId and profile.PId = profileCriteria.PId ORDER BY ID, CId; """
+        """ SELECT Id, UserId, SurveyId, SurveyProfile, PType, CId, cValue, ImportanceRating FROM response, profile, profileCriteria WHERE response.SurveyProfile = profile.PId AND profile.PId = profileCriteria.PId ORDER BY ID, CId; """
     )
     result = cursor.fetchall()
     df = pd.DataFrame(
@@ -82,13 +112,34 @@ if __name__ == "__main__":
         ],
     )
 
+    cursor.execute(
+        "SELECT ONetId, ONetJob, ONetProfile, CId, CValue, ImportanceRating FROM onet, profile, profileCriteria WHERE onet.ONetProfile = profile.PId AND profile.PId = profileCriteria.PId;"
+    )
+    onet = cursor.fetchall()
+    onet_df = pd.DataFrame(
+        onet,
+        columns=[
+            "ONetId",
+            "ONetJob",
+            "ONetProfile",
+            "CId",
+            "CValue",
+            "ImportanceRating",
+        ],
+    )
+
+    onet_profile = {}
+    for i, g in onet_df.groupby("ONetId"):
+        onet_profile[i] = vectorize(g.reset_index())
+    pprint.pprint(onet_profile)
+
     profile = {}
 
     # pprint.pprint(df)
     for i, g in df.groupby("Id"):
         profile[i] = vectorize(g.reset_index())
 
-    pprint.pprint(profile)
+    # pprint.pprint(profile)
 
     for k in profile.keys():
-        pprint.pprint(match_jobs(k, profile[k], profile))
+        pprint.pprint(match_desired_onet(profile[k], onet_profile))
