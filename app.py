@@ -47,17 +47,23 @@ def getSurvey():
 
     cur.execute(
         """
-        select SurveyId, ShortName, q.Id, Question, QuestionType, ProfileCharacteristic 
+        select q.SurveyId, ShortName, q.Id as QNum, Question, QuestionType
         from survey as s 
         join question as q on s.Id = SurveyId 
-        where s.ShortName = 'URE Experience'
+        where s.ShortName = "URE Experience"
         """)
 
-    row_headers = [x[0] for x in cur.description]
+    #row_headers = [x[0] for x in cur.description]
     rv = cur.fetchall()
-    json_data = []
-    for result in rv:
-        json_data.append(dict(zip(row_headers,result)))
+
+    json_data = {"SurveyId" : rv[0][0], "SurveyName" : rv[0][1], "Questions": []}
+
+    for q in rv:
+        r = {"QNum": q[2], "QType": q[4], "Question" : q[3]}
+        print(r)
+        json_data["Questions"].append(r)
+    #for result in rv:
+    #    json_data.append(dict(zip(row_headers,result)))
     return json.dumps(json_data)
 
 if __name__ == "__main__":
