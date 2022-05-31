@@ -416,6 +416,7 @@ if __name__ == "__main__":
 
     workprefs = pd.read_csv(DIRPATH + "data/info/WorkPrefs.csv")
     profiles = pd.read_csv(DIRPATH + "data/info/profile.csv")
+    questionAnswers = pd.read_csv(DIRPATH + "data/info/QuestionResponses.csv", keep_default_na=False)
     onet = pd.read_csv(DIRPATH + "data/info/All_STEM_Occupations.csv")
     onetProfileCriteria = pd.read_csv(DIRPATH + "data/info/OnetProfileCriteria.csv")
 
@@ -427,7 +428,7 @@ if __name__ == "__main__":
     ingest_work_profiles(conn, sheets["Work Profile"])
     ingest_surveys(conn, sheets["Surveys"])
     ingest_questions(conn, sheets["Survey Questions New"])
-    ingest_question_answers(conn, sheets["QuestionResponses"])
+    ingest_question_answers(conn, questionAnswers)
     ingest_ure_responses(conn, sheets["URE Experience"])
     ingest_work_responses(conn, sheets["Work Experience"])
     ingest_onet(conn, onet)
