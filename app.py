@@ -52,18 +52,26 @@ def getSurvey():
         join question as q on s.Id = SurveyId 
         where s.ShortName = "URE Experience"
         """)
+    surveyQ = cur.fetchall()
 
-    #row_headers = [x[0] for x in cur.description]
-    rv = cur.fetchall()
+    cur.execute("select * from questionAcceptableAnswer where SurveyId = 1 order by QuestionId")
+    questionA = cur.fetchall()
 
-    json_data = {"SurveyId" : rv[0][0], "SurveyName" : rv[0][1], "Questions": []}
+    json_data = {"SurveyId" : surveyQ[0][0], "SurveyName" : surveyQ[0][1], "isRequired" : True, "Questions": []}
+    i = 0
+    questionALen = len(questionA)
+    for q in surveyQ:
+        r = {"QNum": q[2], "QType": q[4], "Question" : q[3], "Choices": []}
 
-    for q in rv:
-        r = {"QNum": q[2], "QType": q[4], "Question" : q[3]}
-        print(r)
+        #qA of tuple (SurveyId, QNum, AValue, AText, comment)
+        while i < questionALen and questionA[i][1] == r["QNum"]:
+            qA = questionA[i]
+            r["Choices"].append({"Value": int(qA[2]), "Text": qA[3]})
+            i += 1
+        
+        print(r["Choices"])
         json_data["Questions"].append(r)
-    #for result in rv:
-    #    json_data.append(dict(zip(row_headers,result)))
+
     return json.dumps(json_data)
 
 if __name__ == "__main__":
