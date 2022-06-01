@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, request
 from flask_mysqldb import MySQL
 from flask_cors import CORS
 import json
@@ -41,20 +41,24 @@ def dbUsers():
     rv = cur.fetchall()
     return str(rv)
 
-@app.route("/survey/URE")
+@app.route("/survey")
 def getSurvey():
     cur = mysql.connection.cursor()
+    sid = request.args.get('id', type = int)
 
     cur.execute(
         """
         select q.SurveyId, ShortName, q.Id as QNum, Question, QuestionType
         from survey as s 
         join question as q on s.Id = SurveyId 
-        where s.ShortName = "URE Experience"
-        """)
+        where s.Id = %(sid)s
+        """, 
+        {'sid': sid})
     surveyQ = cur.fetchall()
 
-    cur.execute("select * from questionAcceptableAnswer where SurveyId = 1 order by QuestionId")
+    cur.execute(
+        """select * from questionAcceptableAnswer where SurveyId = %(sid)s order by QuestionId""", 
+        {'sid': sid})
     questionA = cur.fetchall()
 
     return createSurvey(surveyQ, questionA)
