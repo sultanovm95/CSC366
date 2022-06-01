@@ -43,7 +43,6 @@ def dbUsers():
 
 @app.route("/survey/URE")
 def getSurvey():
-    qtype = ["dropdown", "matrix"]
     cur = mysql.connection.cursor()
 
     cur.execute(
@@ -58,21 +57,37 @@ def getSurvey():
     cur.execute("select * from questionAcceptableAnswer where SurveyId = 1 order by QuestionId")
     questionA = cur.fetchall()
 
-    json_data = {"surveyId" : surveyQ[0][0], "surveyName" : surveyQ[0][1], "isRequired" : True, "questions": []}
+    return createSurvey(surveyQ, questionA)
+
+def createSurvey(surveyQ, questionA):
+    json_data = {"surveyId" : surveyQ[0][0], "surveyName" : surveyQ[0][1], "elements": []}
     i = 0
     questionALen = len(questionA)
     for q in surveyQ:
-        r = {"qNum": q[2], "type": qtype[q[4]], "prompt" : q[3], "choices": []}
+        #surveyQ of tuple (SId, Name, Number, prompt, type)
+        qNum = q[2]
+        type = q[4]
+        prompt = q[3]
 
-        #qA of tuple (SurveyId, QNum, AValue, AText, comment)
-        while i < questionALen and questionA[i][1] == r["qNum"]:
+        choices = [] 
+        #questionA of tuple (SurveyId, QNum, AValue, AText, comment)
+        while i < questionALen and questionA[i][1] == qNum:
             qA = questionA[i]
-            r["choices"].append({"value": int(qA[2]), "text": qA[3]})
+            choices.append({"value": int(qA[2]), "text": qA[3]})
             i += 1
         
-        json_data["questions"].append(r)
-
+        r = createQuestion(qNum, type, prompt, choices)
+        json_data["elements"].append(r)
     return json.dumps(json_data)
 
+def createQuestion(num, type, prompt, choices):
+    qtype = ["dropdown", "matrix"]
+    if(type == 1):
+        return {"name": str(num), "type": qtype[type], "title" : prompt, "isRequired" : True, 
+                "columns": choices, "rows": [{"value": "", "text": ""}]}
+    else:
+        return {"name": str(num), "type": qtype[type], "title" : prompt, "isRequired" : True,
+                "choices": choices}
+    
 if __name__ == "__main__":
     app.run(host="localhost", port=5000, debug=True)
