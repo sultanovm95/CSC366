@@ -1,3 +1,4 @@
+import MySQLdb
 from flask import Flask, request
 from flask_mysqldb import MySQL
 from flask_cors import CORS
@@ -40,6 +41,18 @@ def dbUsers():
     cur.execute("select user,host from mysql.user")
     rv = cur.fetchall()
     return str(rv)
+
+@app.route("/surveys")
+def getSurveys():
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cur.execute("select Id, ShortName, Name, Description from survey")
+    return json.dumps({"surveys": cur.fetchall()})
+
+@app.route("/jobs")
+def getJobs():
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cur.execute("select ONetId, ONetJob, ONetDescription from onet")
+    return json.dumps({"jobs": cur.fetchall()}) 
 
 @app.route("/survey")
 def getSurvey():
