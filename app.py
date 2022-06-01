@@ -43,6 +43,7 @@ def dbUsers():
 
 @app.route("/survey/URE")
 def getSurvey():
+    qtype = ["dropdown", "matrix"]
     cur = mysql.connection.cursor()
 
     cur.execute(
@@ -57,20 +58,19 @@ def getSurvey():
     cur.execute("select * from questionAcceptableAnswer where SurveyId = 1 order by QuestionId")
     questionA = cur.fetchall()
 
-    json_data = {"SurveyId" : surveyQ[0][0], "SurveyName" : surveyQ[0][1], "isRequired" : True, "Questions": []}
+    json_data = {"surveyId" : surveyQ[0][0], "surveyName" : surveyQ[0][1], "isRequired" : True, "questions": []}
     i = 0
     questionALen = len(questionA)
     for q in surveyQ:
-        r = {"QNum": q[2], "QType": q[4], "Question" : q[3], "Choices": []}
+        r = {"qNum": q[2], "type": qtype[q[4]], "prompt" : q[3], "choices": []}
 
         #qA of tuple (SurveyId, QNum, AValue, AText, comment)
-        while i < questionALen and questionA[i][1] == r["QNum"]:
+        while i < questionALen and questionA[i][1] == r["qNum"]:
             qA = questionA[i]
-            r["Choices"].append({"Value": int(qA[2]), "Text": qA[3]})
+            r["choices"].append({"value": int(qA[2]), "text": qA[3]})
             i += 1
         
-        print(r["Choices"])
-        json_data["Questions"].append(r)
+        json_data["questions"].append(r)
 
     return json.dumps(json_data)
 
