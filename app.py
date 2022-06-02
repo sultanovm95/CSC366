@@ -42,17 +42,30 @@ def dbUsers():
     rv = cur.fetchall()
     return str(rv)
 
-@app.route("/surveys")
-def getSurveys():
+@app.route("/user/<aid>/profiles")
+def getUserProfile(aid=0):
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cur.execute("select Id, ShortName, Name, Description from survey")
-    return json.dumps({"surveys": cur.fetchall()})
+    cur.execute("""
+        select * from 
+        ((select userId as AId, SurveyProfile as PId from response)
+        union
+        (select * from accountProfile)) AS userProfiles
+        join profile on userProfiles.PId = profile.PId 
+        where AId = %(AId)s
+        """, {"AId" : int(aid)})
+    return json.dumps({"jobs": cur.fetchall()}) 
 
 @app.route("/jobs")
 def getJobs():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("select ONetId, ONetJob, ONetDescription from onet")
-    return json.dumps({"jobs": cur.fetchall()}) 
+    return json.dumps({"jobs": cur.fetchall()})
+
+@app.route("/surveys")
+def getSurveys():
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cur.execute("select Id, ShortName, Name, Description from survey")
+    return json.dumps({"surveys": cur.fetchall()})
 
 @app.route("/survey")
 def getSurvey():
