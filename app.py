@@ -45,6 +45,7 @@ def dbUsers():
     rv = cur.fetchall()
     return str(rv)
 
+#Note use https://www.onetonline.org/link/summary/<job code to link to job page>
 @app.route("/match/profile")
 def getJobMatches(pid=0):
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
