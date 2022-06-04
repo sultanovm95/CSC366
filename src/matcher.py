@@ -1,4 +1,3 @@
-from utils.sqlconnect import get_connector
 import pprint
 import pandas as pd
 import numpy as np
@@ -9,9 +8,7 @@ def _cossim(s, w):
     s = _reshape_vector(s, size)
     w = _reshape_vector(w, size)
 
-    return np.sum(s * w) / (
-        np.sqrt(np.sum(np.square(s))) * np.sqrt(np.sum(np.square(w)))
-    )
+    return np.sum(s * w) / (np.sqrt(np.sum(s * s)) * np.sqrt(np.sum(w * w)))
 
 
 def _pearson(s, w):
@@ -41,16 +38,79 @@ def _reshape_vector(v, size):
     return np.resize(np.array(v), size)
 
 
+def getProfile(cursor, profile_id):
+    cursor.execute(
+        f"SELECT Id, UserId, SurveyId, SurveyProfile, PType, CId, cValue, ImportanceRating \
+            FROM response, profile, profileCriteria \
+            WHERE response.SurveyProfile = profile.PId AND profile.PId = profileCriteria.PId AND profile.PId = {profile_id}\
+            ORDER BY ID, CId; \
+        "
+    )
+    result = cursor.fetchall()
+
+    df = pd.DataFrame(
+        result,
+        columns=[
+            "Id",
+            "UserId",
+            "SurveyId",
+            "SurveyPofile",
+            "ProfileType",
+            "CId",
+            "CValue",
+            "ImportanceRating",
+        ],
+    )
+
+    group = df.groupby("Id")
+    profile = group.get_group((list(group.groups)[0]))
+
+    if len(group) != 1:
+        return None, None
+    return vectorize(profile.reset_index()), profile["SurveyId"]
+
+
+def getONetJobs(cursor):
+    cursor.execute(
+        "SELECT ONetId, ONetJob, ONetProfile, CId, CValue, ImportanceRating FROM onet, profile, profileCriteria WHERE onet.ONetProfile = profile.PId AND profile.PId = profileCriteria.PId;"
+    )
+    onet = cursor.fetchall()
+    onet_df = pd.DataFrame(
+        onet,
+        columns=[
+            "ONetId",
+            "ONetJob",
+            "ONetProfile",
+            "CId",
+            "CValue",
+            "ImportanceRating",
+        ],
+    )
+
+    group = onet_df.groupby("ONetId")
+
+    if len(group) == 0:
+        return None
+
+    onet_profile = {}
+    for i, g in group:
+        onet_profile[i] = vectorize(g.reset_index())
+    return onet_profile
+
+
 def vectorize(group):
     data = group[["CId", "CValue", "ImportanceRating"]]
     max_cid = data["CId"].max()
-    # print(data)
+
     values = np.zeros(shape=max_cid)
     importances = np.ones(shape=max_cid) * 4
 
     for i, vals in data.iterrows():
         values[i] = vals["CValue"]
         importances[i] = vals["ImportanceRating"]
+
+    np.nan_to_num(values, copy=False)
+    np.nan_to_num(importances, copy=False, nan=4)
 
     return values, importances
 
@@ -91,6 +151,8 @@ def match_exp_onet(job, onet_jobs, limit=10):
 
 
 if __name__ == "__main__":
+    from utils.sqlconnect import get_connector
+
     conn = get_connector()
     cursor = conn.cursor()
 

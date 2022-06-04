@@ -6,6 +6,8 @@ import json
 import os
 from dotenv import load_dotenv
 
+from src.matcher import getONetJobs, getProfile, match_desired_onet, match_exp_onet
+
 app = Flask(__name__)
 CORS(app)
 
@@ -18,10 +20,10 @@ PORT = int(os.getenv("PORT"))
 DB = os.getenv("MYSQL_DB")
 HOST = os.getenv("MYSQL_HOST")
 
-app.config.setdefault("MYSQL_HOST", "localhost")
+app.config.setdefault("MYSQL_HOST", HOST)
 app.config.setdefault("MYSQL_USER", USER)
 app.config.setdefault("MYSQL_PASSWORD", PASSWORD)
-app.config.setdefault("MYSQL_DB", DB )
+app.config.setdefault("MYSQL_DB", DB)
 app.config.setdefault("MYSQL_PORT", PORT)
 app.config.setdefault("MYSQL_UNIX_SOCKET", None)
 app.config.setdefault("MYSQL_CONNECT_TIMEOUT", 10)
@@ -35,6 +37,7 @@ app.config.setdefault("MYSQL_CUSTOM_OPTIONS", None)
 
 mysql = MySQL(app)
 
+
 @app.route("/")
 def dbUsers():
     cur = mysql.connection.cursor()
@@ -42,18 +45,23 @@ def dbUsers():
     rv = cur.fetchall()
     return str(rv)
 
+
 @app.route("/user/<aid>/profiles")
 def getUserProfile(aid=0):
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cur.execute("""
+    cur.execute(
+        """
         select * from 
         ((select userId as AId, SurveyProfile as PId from response)
         union
         (select * from accountProfile)) AS userProfiles
         join profile on userProfiles.PId = profile.PId 
         where AId = %(AId)s
-        """, {"AId" : int(aid)})
-    return json.dumps({"jobs": cur.fetchall()}) 
+        """,
+        {"AId": int(aid)},
+    )
+    return json.dumps({"jobs": cur.fetchall()})
+
 
 @app.route("/jobs")
 def getJobs():
@@ -61,16 +69,18 @@ def getJobs():
     cur.execute("select ONetId, ONetJob, ONetDescription from onet")
     return json.dumps({"jobs": cur.fetchall()})
 
+
 @app.route("/surveys")
 def getSurveys():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("select Id, ShortName, Name, Description from survey")
     return json.dumps({"surveys": cur.fetchall()})
 
+
 @app.route("/survey")
 def getSurvey():
     cur = mysql.connection.cursor()
-    sid = request.args.get('id', type = int)
+    sid = request.args.get("id", type=int)
 
     cur.execute(
         """
@@ -78,46 +88,82 @@ def getSurvey():
         from survey as s 
         join question as q on s.Id = SurveyId 
         where s.Id = %(sid)s
-        """, 
-        {'sid': sid})
+        """,
+        {"sid": sid},
+    )
     surveyQ = cur.fetchall()
 
     cur.execute(
-        """select * from questionAcceptableAnswer where SurveyId = %(sid)s order by QuestionId""", 
-        {'sid': sid})
+        """select * from questionAcceptableAnswer where SurveyId = %(sid)s order by QuestionId""",
+        {"sid": sid},
+    )
     questionA = cur.fetchall()
 
     return createSurvey(surveyQ, questionA)
 
+
+@app.route("/match")
+def getMatch():
+    cur = mysql.connection.cursor()
+    profile_id = request.json.get("profileId")
+
+    if profile_id is None:
+        return {"Error": "ProfileId not provided"}, 500
+
+    profile, survey = getProfile(cur, profile_id=profile_id)
+    if profile is None:
+        return {"Error": "ProfileId not Found"}, 500
+    onet = getONetJobs(cur)
+    if onet is None:
+        return {"Error": "Internal Error, ONet jobs not found"}, 500
+
+    matches = match_exp_onet(profile, onet)
+    print(matches)
+    return {"matches": matches}
+
+
 def createSurvey(surveyQ, questionA):
-    json_data = {"surveyId" : surveyQ[0][0], "surveyName" : surveyQ[0][1], "elements": []}
+    json_data = {"surveyId": surveyQ[0][0], "surveyName": surveyQ[0][1], "elements": []}
     i = 0
     questionALen = len(questionA)
     for q in surveyQ:
-        #surveyQ of tuple (SId, Name, Number, prompt, type)
+        # surveyQ of tuple (SId, Name, Number, prompt, type)
         qNum = q[2]
         type = q[4]
         prompt = q[3]
 
-        choices = [] 
-        #questionA of tuple (SurveyId, QNum, AValue, AText, comment)
+        choices = []
+        # questionA of tuple (SurveyId, QNum, AValue, AText, comment)
         while i < questionALen and questionA[i][1] == qNum:
             qA = questionA[i]
             choices.append({"value": int(qA[2]), "text": qA[3]})
             i += 1
-        
+
         r = createQuestion(qNum, type, prompt, choices)
         json_data["elements"].append(r)
     return json.dumps(json_data)
 
+
 def createQuestion(num, type, prompt, choices):
     qtype = ["dropdown", "matrix"]
-    if(type == 1):
-        return {"name": str(num), "type": qtype[type], "title" : prompt, "isRequired" : True, 
-                "columns": choices, "rows": [{"value": "", "text": ""}]}
+    if type == 1:
+        return {
+            "name": str(num),
+            "type": qtype[type],
+            "title": prompt,
+            "isRequired": True,
+            "columns": choices,
+            "rows": [{"value": "", "text": ""}],
+        }
     else:
-        return {"name": str(num), "type": qtype[type], "title" : prompt, "isRequired" : True,
-                "choices": choices}
-    
+        return {
+            "name": str(num),
+            "type": qtype[type],
+            "title": prompt,
+            "isRequired": True,
+            "choices": choices,
+        }
+
+
 if __name__ == "__main__":
     app.run(host="localhost", port=5000, debug=True)
