@@ -1,6 +1,7 @@
 import pprint
 import pandas as pd
 import numpy as np
+from utils.sqlconnect import get_connector
 
 
 def _cossim(s, w):
@@ -150,24 +151,25 @@ def match_exp_onet(job, onet_jobs, limit=10):
     return results[:limit]
 
 
-if __name__ == "__main__":
-    from utils.sqlconnect import get_connector
-
+def match(pid):
     conn = get_connector()
     cursor = conn.cursor()
 
     cursor.execute(
-        """ SELECT Id, UserId, SurveyId, SurveyProfile, PType, CId, cValue, ImportanceRating FROM response, profile, profileCriteria WHERE response.SurveyProfile = profile.PId AND profile.PId = profileCriteria.PId ORDER BY ID, CId; """
+        """
+        select profile.PId, PType, PName, CId, cValue, importanceRating 
+        from profile join profileCriteria on profileCriteria.PId = profile.PId
+        where profile.PId = %(pid)s; 
+        """,
+        {"pid": pid},
     )
     result = cursor.fetchall()
     df = pd.DataFrame(
         result,
         columns=[
-            "Id",
-            "UserId",
-            "SurveyId",
-            "SurveyPofile",
+            "PId",
             "ProfileType",
+            "PName",
             "CId",
             "CValue",
             "ImportanceRating",
@@ -175,7 +177,11 @@ if __name__ == "__main__":
     )
 
     cursor.execute(
-        "SELECT ONetId, ONetJob, ONetProfile, CId, CValue, ImportanceRating FROM onet, profile, profileCriteria WHERE onet.ONetProfile = profile.PId AND profile.PId = profileCriteria.PId;"
+        """
+        SELECT ONetId, ONetJob, ONetProfile, CId, CValue, ImportanceRating 
+        FROM onet, profile, profileCriteria 
+        WHERE onet.ONetProfile = profile.PId AND profile.PId = profileCriteria.PId;
+        """
     )
     onet = cursor.fetchall()
     onet_df = pd.DataFrame(
@@ -190,18 +196,17 @@ if __name__ == "__main__":
         ],
     )
 
-    onet_profile = {}
+    onet_profiles = {}
     for i, g in onet_df.groupby("ONetId"):
-        onet_profile[i] = vectorize(g.reset_index())
-    pprint.pprint(onet_profile)
+        onet_profiles[i] = vectorize(g.reset_index())
 
     profile = {}
-
-    # pprint.pprint(df)
-    for i, g in df.groupby("Id"):
+    for i, g in df.groupby("PId"):
         profile[i] = vectorize(g.reset_index())
 
-    # pprint.pprint(profile)
+    k = profile.keys()
+    return match_desired_onet(profile[list(k)[0]], onet_profiles) if len(k) else []
 
-    for k in profile.keys():
-        pprint.pprint(match_desired_onet(profile[k], onet_profile))
+
+if __name__ == "__main__":
+    match(1)
