@@ -1,5 +1,5 @@
 import MySQLdb
-import os
+import os, bcrypt
 from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -13,52 +13,68 @@ DIRPATH = os.getenv("DIRPATH")
 DB = os.getenv("MYSQL_DB")
 
 class User:
+    def __init__(self):
+        # create salt
+        self.salt = bcrypt.gensalt()
+        
     '''
     CRUD operations for User
     '''
-    def __init__(self):
-        # create connection
-        self.conn = MySQLdb.connect(host="127.0.0.1", port=PORT, user="root", database=DB)
-    
     def create_user(self, user):
         '''
         Create a new user
         '''
         try:
+            conn = MySQLdb.connect(host="127.0.0.1", port=PORT, user="root", database=DB)
             # create a cursor
-            cur = self.conn.cursor()
+            cur = conn.cursor()
+            # find max id and set new id for the user
+            cur.execute('''
+                        SELECT MAX(id)
+                        FROM account''')
+            max_id = cur.fetchone()
+            id = int(max_id[0]) + 1
+            # hash password
+            hashed_password = bcrypt.hashpw(user['password'].encode('utf-8'), self.salt)
             # execute the query
-            cur.execute(
-                "INSERT INTO account(Id, Name, Email, Password, accountType) VALUES(%s, %s, %s, %s, %s)", 
-                (user['id'], user['name'], user['email'], generate_password_hash(user['password'], method='sha256'), user['account_type'])
-            )
+            cur.execute('''
+                        INSERT INTO account(Id, Name, Email, Password, accountType) 
+                        VALUES(%s, %s, %s, %s, %s)''', 
+                        (id, user['name'], user['email'], hashed_password, user['account_type']))
             # commit to DB
-            self.conn.commit()
+            conn.commit()
             # close the cursor
             cur.close()
             # close connection
-            self.conn.close()
+            conn.close()
             return {'message': 'User created successfully'}
         except Exception as e:
             print(e)
             return {'message': 'Something went wrong'}, 500
         
-    def check_user(self, email):
+    def check_user(self, user):
         '''
         Check if a user has already exists
         '''
         try:
+            conn = MySQLdb.connect(host="127.0.0.1", port=PORT, user="root", database=DB)
             # create a cursor
-            cur = self.conn.cursor()
+            cur = conn.cursor()
             # execute the query
-            cur.execute("SELECT * FROM account WHERE email = %s", (email,))
-            # commit to DB
-            self.conn.commit()
+            cur.execute('''
+                        SELECT * 
+                        FROM account 
+                        WHERE email = %(email)s''', 
+                        {'email': user['email']})
+            # fetch the data
+            record = cur.fetchone()
             # close the cursor
             cur.close()
             # close connection
-            self.conn.close()
-            return cur.fetchone()
+            conn.close()
+            if record:
+                return True
+            return False
         except Exception as e:
             print(e)
             return {'message': 'Something went wrong'}, 500
@@ -68,56 +84,77 @@ class User:
         Verify if input user match with DB user
         '''
         try:
+            conn = MySQLdb.connect(host="127.0.0.1", port=PORT, user="root", database=DB)
             # create a cursor
-            cur = self.conn.cursor()
+            cur = conn.cursor()
             # execute the query
-            cur.execute("SELECT * FROM account WHERE email = %s", (email,))
-            # commit to DB
-            self.conn.commit()
+            cur.execute('''
+                        SELECT password 
+                        FROM account 
+                        WHERE email = %(email)s''', 
+                        {'email': user['email']})
+            # fetch the data
+            db_password = cur.fetchone()
+            
+            if db_password:
+                if bcrypt.checkpw(user['password'].encode('utf-8'), db_password[0].encode('utf-8')):
+                    return True
+            
             # close the cursor
             cur.close()
             # close connection
-            self.conn.close()
-            return cur.fetchone()
+            conn.close()
+            
+            return False            
         except Exception as e:
             print(e)
             return {'message': 'Something went wrong'}, 500
         
-    def update_user(self, user):
+    def update_user(self, user, email):
         '''
         Update a user
         '''
         try:
+            conn = MySQLdb.connect(host="127.0.0.1", port=PORT, user="root", database=DB)
+            hashed_password = bcrypt.hashpw(user['password'].encode('utf-8'), self.salt)
             # create a cursor
-            cur = self.conn.cursor()
+            cur = conn.cursor()
             # execute the query
-            cur.execute("UPDATE account SET name = %s, email = %s, password = %s WHERE email = %s", (user['name'], user['email'], user['password'], user['email']))
+            cur.execute('''
+                        UPDATE account 
+                        SET name = %(name)s, email = %(email)s, password = %(pass)s 
+                        WHERE email = %(existing_email)s''', 
+                        {'name': user['name'], 'email': user['email'], 'pass': hashed_password, 'existing_email': email})
             # commit to DB
-            self.conn.commit()
+            conn.commit()
             # close the cursor
             cur.close()
             # close connection
-            self.conn.close()
+            conn.close()
             return {'message': 'User updated successfully'}
         except Exception as e:
             print(e)
             return {'message': 'Something went wrong'}, 500
         
-    def delete_user(self, email):
+    def delete_user(self, user):
         '''
         Delete a user
         '''
         try:
+            conn = MySQLdb.connect(host="127.0.0.1", port=PORT, user="root", database=DB)
             # create a cursor
-            cur = self.conn.cursor()
+            cur = conn.cursor()
             # execute the query
-            cur.execute("DELETE FROM users WHERE email = %s", (email))
+            cur.execute('''
+                        DELETE FROM account 
+                        WHERE email = %(email)s''', 
+                        {'email': user['email']})
             # commit to DB
-            self.conn.commit()
+            conn.commit()
             # close the cursor
             cur.close()
             # close connection
-            self.conn.close()
+            conn.close()
             return {'message': 'User deleted successfully'}
         except Exception as e:
             print(e)
