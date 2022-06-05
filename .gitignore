@@ -8,3 +8,4 @@ CSC366
 src/utils/__pycache__
 test/.pytest_cache
 test/__pycache__
+__pycache__
