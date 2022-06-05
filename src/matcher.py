@@ -1,17 +1,14 @@
-from utils.sqlconnect import get_connector
 import pprint
 import pandas as pd
 import numpy as np
-
+from utils.sqlconnect import get_connector
 
 def _cossim(s, w):
     size = max(len(s), len(w))
     s = _reshape_vector(s, size)
     w = _reshape_vector(w, size)
 
-    return np.sum(s * w) / (
-        np.sqrt(np.sum(np.square(s))) * np.sqrt(np.sum(np.square(w)))
-    )
+    return np.sum(s * w) / (np.sqrt(np.sum(s * s)) * np.sqrt(np.sum(w * w)))
 
 
 def _pearson(s, w):
@@ -41,16 +38,79 @@ def _reshape_vector(v, size):
     return np.resize(np.array(v), size)
 
 
+def getProfile(cursor, profile_id):
+    cursor.execute(
+        f"SELECT Id, UserId, SurveyId, SurveyProfile, PType, CId, cValue, ImportanceRating \
+            FROM response, profile, profileCriteria \
+            WHERE response.SurveyProfile = profile.PId AND profile.PId = profileCriteria.PId AND profile.PId = {profile_id}\
+            ORDER BY ID, CId; \
+        "
+    )
+    result = cursor.fetchall()
+
+    df = pd.DataFrame(
+        result,
+        columns=[
+            "Id",
+            "UserId",
+            "SurveyId",
+            "SurveyPofile",
+            "ProfileType",
+            "CId",
+            "CValue",
+            "ImportanceRating",
+        ],
+    )
+
+    group = df.groupby("Id")
+    profile = group.get_group((list(group.groups)[0]))
+
+    if len(group) != 1:
+        return None, None
+    return vectorize(profile.reset_index()), profile["SurveyId"]
+
+
+def getONetJobs(cursor):
+    cursor.execute(
+        "SELECT ONetId, ONetJob, ONetProfile, CId, CValue, ImportanceRating FROM onet, profile, profileCriteria WHERE onet.ONetProfile = profile.PId AND profile.PId = profileCriteria.PId;"
+    )
+    onet = cursor.fetchall()
+    onet_df = pd.DataFrame(
+        onet,
+        columns=[
+            "ONetId",
+            "ONetJob",
+            "ONetProfile",
+            "CId",
+            "CValue",
+            "ImportanceRating",
+        ],
+    )
+
+    group = onet_df.groupby("ONetId")
+
+    if len(group) == 0:
+        return None
+
+    onet_profile = {}
+    for i, g in group:
+        onet_profile[i] = vectorize(g.reset_index())
+    return onet_profile
+
+
 def vectorize(group):
     data = group[["CId", "CValue", "ImportanceRating"]]
     max_cid = data["CId"].max()
-    # print(data)
+
     values = np.zeros(shape=max_cid)
     importances = np.ones(shape=max_cid) * 4
 
     for i, vals in data.iterrows():
         values[i] = vals["CValue"]
         importances[i] = vals["ImportanceRating"]
+
+    np.nan_to_num(values, copy=False)
+    np.nan_to_num(importances, copy=False, nan=4)
 
     return values, importances
 
@@ -90,22 +150,25 @@ def match_exp_onet(job, onet_jobs, limit=10):
     return results[:limit]
 
 
-if __name__ == "__main__":
+def match(pid):
     conn = get_connector()
     cursor = conn.cursor()
 
     cursor.execute(
-        """ SELECT Id, UserId, SurveyId, SurveyProfile, PType, CId, cValue, ImportanceRating FROM response, profile, profileCriteria WHERE response.SurveyProfile = profile.PId AND profile.PId = profileCriteria.PId ORDER BY ID, CId; """
+        """
+        select profile.PId, PType, PName, CId, cValue, importanceRating 
+        from profile join profileCriteria on profileCriteria.PId = profile.PId
+        where profile.PId = %(pid)s; 
+        """,
+        {"pid": pid},
     )
     result = cursor.fetchall()
     df = pd.DataFrame(
         result,
         columns=[
-            "Id",
-            "UserId",
-            "SurveyId",
-            "SurveyPofile",
+            "PId",
             "ProfileType",
+            "PName",
             "CId",
             "CValue",
             "ImportanceRating",
@@ -113,7 +176,11 @@ if __name__ == "__main__":
     )
 
     cursor.execute(
-        "SELECT ONetId, ONetJob, ONetProfile, CId, CValue, ImportanceRating FROM onet, profile, profileCriteria WHERE onet.ONetProfile = profile.PId AND profile.PId = profileCriteria.PId;"
+        """
+        SELECT ONetId, ONetJob, ONetProfile, CId, CValue, ImportanceRating 
+        FROM onet, profile, profileCriteria 
+        WHERE onet.ONetProfile = profile.PId AND profile.PId = profileCriteria.PId;
+        """
     )
     onet = cursor.fetchall()
     onet_df = pd.DataFrame(
@@ -128,18 +195,17 @@ if __name__ == "__main__":
         ],
     )
 
-    onet_profile = {}
+    onet_profiles = {}
     for i, g in onet_df.groupby("ONetId"):
-        onet_profile[i] = vectorize(g.reset_index())
-    pprint.pprint(onet_profile)
+        onet_profiles[i] = vectorize(g.reset_index())
 
     profile = {}
-
-    # pprint.pprint(df)
-    for i, g in df.groupby("Id"):
+    for i, g in df.groupby("PId"):
         profile[i] = vectorize(g.reset_index())
 
-    # pprint.pprint(profile)
+    k = profile.keys()
+    return match_desired_onet(profile[list(k)[0]], onet_profiles) if len(k) > 0 else []
 
-    for k in profile.keys():
-        pprint.pprint(match_desired_onet(profile[k], onet_profile))
+
+if __name__ == "__main__":
+    match(1)
