@@ -33,7 +33,10 @@ class User:
                         SELECT MAX(id)
                         FROM account''')
             max_id = cur.fetchone()
-            id = int(max_id[0]) + 1
+            if max_id:
+                id = int(max_id[0]) + 1
+            else:
+                id = 1
             # hash password
             hashed_password = bcrypt.hashpw(user['password'].encode('utf-8'), self.salt)
             # execute the query
