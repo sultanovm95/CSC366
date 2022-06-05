@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 from utils.sqlconnect import get_connector
 
-
 def _cossim(s, w):
     size = max(len(s), len(w))
     s = _reshape_vector(s, size)
@@ -205,7 +204,7 @@ def match(pid):
         profile[i] = vectorize(g.reset_index())
 
     k = profile.keys()
-    return match_desired_onet(profile[list(k)[0]], onet_profiles) if len(k) else []
+    return match_desired_onet(profile[list(k)[0]], onet_profiles) if len(k) > 0 else []
 
 
 if __name__ == "__main__":
