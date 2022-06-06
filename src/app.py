@@ -39,7 +39,6 @@ app.config.setdefault("MYSQL_CUSTOM_OPTIONS", None)
 
 mysql = MySQL(app)
 
-
 @app.route("/")
 def dbUsers():
     cur = mysql.connection.cursor()
@@ -48,7 +47,6 @@ def dbUsers():
     return str(rv)
 
 
-# Note use https://www.onetonline.org/link/summary/<job code to link to job page>
 @app.route("/match/profile")
 def getJobMatches(pid=0):
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
@@ -81,7 +79,7 @@ def getUserProfile(aid=0):
         """,
         {"AId": int(aid)},
     )
-    return json.dumps({"jobs": cur.fetchall()})
+    return json.dumps({"profiles": cur.fetchall()})
 
 
 @app.route("/jobs")
