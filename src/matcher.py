@@ -38,7 +38,7 @@ def _reshape_vector(v, size):
     return np.resize(np.array(v), size)
 
 
-def getProfile(cursor, profile_id):
+def getVectorizedProfile(cursor, profile_id):
     cursor.execute(
         f"SELECT Id, UserId, SurveyId, SurveyProfile, PType, CId, cValue, ImportanceRating \
             FROM response, profile, profileCriteria \

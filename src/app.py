@@ -9,7 +9,7 @@ import json
 import os
 from dotenv import load_dotenv
 
-from matcher import match, getONetJobs, getProfile, match_desired_onet, match_exp_onet
+from matcher import match, getONetJobs, getVectorizedProfile, match_desired_onet, match_exp_onet
 
 app = Flask(__name__)
 CORS(app)
@@ -171,7 +171,7 @@ def getMatch():
     if profile_id is None:
         return {"Error": "ProfileId not provided"}, 500
 
-    profile, survey = getProfile(cur, profile_id=profile_id)
+    profile, survey = getVectorizedProfile(cur, profile_id=profile_id)
     if profile is None:
         return {"Error": "ProfileId not Found"}, 500
     onet = getONetJobs(cur)
