@@ -47,6 +47,32 @@ def dbUsers():
     rv = cur.fetchall()
     return str(rv)
 
+@app.route("/profile", methods=['GET', 'POST'])
+def profile():
+    if request.method == 'GET':
+        pid = request.args.get("pid", type=int)
+        return getProfile(pid)
+    elif request.method == 'POST':
+        return addProfile()
+    else:
+        return "{0} not an implemented method".format(request.method)
+
+def getProfile(pid):
+    cur = mysql.connect.cursor(MySQLdb.cursors.DictCursor)
+    cur.execute("select * from profile where %(PId)s", {"PId": pid})
+    pro = cur.fetchone()
+
+    cur.execute(
+        """
+        select criteria.CId, cName, cValue, importanceRating from profileCriteria
+        join criteria on criteria.CId = profileCriteria.CId
+        where PId = %(PId)s;
+        """, 
+        {"PId": pid})
+    return json.dumps({"PId": pid, "PName": pro["PName"], "Criteria": cur.fetchall()})
+
+def addProfile():
+    return "Add profile not implemented yet"    
 
 @app.route("/profile/match")
 def getJobMatches(pid=0):
@@ -73,6 +99,8 @@ def userProfile():
         return getUserProfiles(aid)
     elif request.method == 'POST':
         return postUserProfiles(aid)
+    else:
+        return "{0} not an implemented method".format(request.method)
 
 def getUserProfiles(aid):
     try:
@@ -94,8 +122,6 @@ def getUserProfiles(aid):
 
 def postUserProfiles(aid):
     return "user Profile POST not implemente yet"
-
-    
 
 
 @app.route("/jobs")
