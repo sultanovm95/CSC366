@@ -47,10 +47,14 @@ def dbUsers():
     rv = cur.fetchall()
     return str(rv)
 
+
 @app.route("/profile", methods=['GET', 'POST'])
 def profile():
     if request.method == 'GET':
         pid = request.args.get("pid", type=int)
+        if pid == None:
+            return {"Error": "pid not provided"}, 400
+
         return getProfile(pid)
     elif request.method == 'POST':
         return addProfile()
@@ -74,11 +78,19 @@ def getProfile(pid):
 def addProfile():
     return "Add profile not implemented yet"    
 
-@app.route("/profile/match")
-def getJobMatches(pid=0):
-    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    pid = request.args.get("pid", type=int)
 
+@app.route("/profile/match", methods=['GET', 'POST'])
+def profileMatch(pid=0):
+    if request.method == 'GET':
+        pid = request.args.get("pid", type=int)
+        if pid == None:
+            return {"Error": "pid not provided"}, 400
+        return getJobMatches(pid)
+    elif request.method == 'POST':
+        return postJobMatches({"Profile": "Not Actual"})
+
+def getJobMatches(pid):
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("select ONetId, ONetJob, ONetDescription from onet")
 
     matchedJobs = []
@@ -91,10 +103,14 @@ def getJobMatches(pid=0):
 
     return json.dumps({"PId": pid, "matches": matchedJobs})
 
+def postJobMatches(profileJson):
+    return "matching based on json post not implemented"
 
 @app.route("/profile/user", methods=['GET', 'POST'])
 def userProfile():
     aid = request.args.get("aid", type=int)
+    if aid == None:
+            return {"Error": "aid not provided"}, 400
     if request.method == 'GET':
         return getUserProfiles(aid)
     elif request.method == 'POST':
@@ -138,10 +154,32 @@ def getSurveys():
     return json.dumps({"surveys": cur.fetchall()})
 
 
+@app.route("/match")
+def getMatch():
+    cur = mysql.connection.cursor()
+    profile_id = request.json.get("profileId")
+
+    if profile_id is None:
+        return {"Error": "ProfileId not provided"}, 500
+
+    profile, survey = getVectorizedProfile(cur, profile_id=profile_id)
+    if profile is None:
+        return {"Error": "ProfileId not Found"}, 500
+    onet = getONetJobs(cur)
+    if onet is None:
+        return {"Error": "Internal Error, ONet jobs not found"}, 500
+
+    matches = match_exp_onet(profile, onet)
+    print(matches)
+    return json.dumps({"matches": matches})
+    
+
 @app.route("/survey")
 def getSurvey():
     cur = mysql.connection.cursor()
     sid = request.args.get("id", type=int)
+    if sid == None:
+            return {"Error": "survey id not provided"}, 400
 
     cur.execute(
         """
@@ -161,27 +199,6 @@ def getSurvey():
     questionA = cur.fetchall()
 
     return createSurvey(surveyQ, questionA)
-
-
-@app.route("/match")
-def getMatch():
-    cur = mysql.connection.cursor()
-    profile_id = request.json.get("profileId")
-
-    if profile_id is None:
-        return {"Error": "ProfileId not provided"}, 500
-
-    profile, survey = getVectorizedProfile(cur, profile_id=profile_id)
-    if profile is None:
-        return {"Error": "ProfileId not Found"}, 500
-    onet = getONetJobs(cur)
-    if onet is None:
-        return {"Error": "Internal Error, ONet jobs not found"}, 500
-
-    matches = match_exp_onet(profile, onet)
-    print(matches)
-    return {"matches": matches}
-
 
 def createSurvey(surveyQ, questionA):
     json_data = {"surveyId": surveyQ[0][0], "surveyName": surveyQ[0][1], "elements": []}
@@ -203,7 +220,6 @@ def createSurvey(surveyQ, questionA):
         r = createQuestion(qNum, type, prompt, choices)
         json_data["elements"].append(r)
     return json.dumps(json_data)
-
 
 def createQuestion(num, type, prompt, choices):
     qtype = ["dropdown", "matrix"]
