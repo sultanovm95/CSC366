@@ -106,6 +106,7 @@ def getJobMatches(pid):
 def postJobMatches(profileJson):
     return "matching based on json post not implemented"
 
+
 @app.route("/profile/user", methods=['GET', 'POST'])
 def userProfile():
     aid = request.args.get("aid", type=int)
@@ -114,6 +115,7 @@ def userProfile():
     if request.method == 'GET':
         return getUserProfiles(aid)
     elif request.method == 'POST':
+        #for getting matches with profile json templates
         return postUserProfiles(aid)
     else:
         return "{0} not an implemented method".format(request.method)
@@ -138,6 +140,23 @@ def getUserProfiles(aid):
 
 def postUserProfiles(aid):
     return "user Profile POST not implemente yet"
+
+@app.route("/profile/template")
+def getTemplate():
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cur.execute("select * from criteria")
+    criterion = cur.fetchall()
+
+    if criterion == None:
+        return {"Error": "Couldn't connect to the DB"}, 500
+
+    profileCriteria = []
+    for c in criterion:
+        cp = {"CId": c["CId"],"cName": c["cName"], "cValue": 0, "importanceRating": 0}
+        profileCriteria.append(cp)
+
+    profileTemplate = {"PId": 0, "PName": "Template", "Criteria": profileCriteria}
+    return json.dumps(profileTemplate)
 
 
 @app.route("/jobs")
@@ -172,7 +191,7 @@ def getMatch():
     matches = match_exp_onet(profile, onet)
     print(matches)
     return json.dumps({"matches": matches})
-    
+
 
 @app.route("/survey")
 def getSurvey():
