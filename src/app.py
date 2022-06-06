@@ -1,4 +1,5 @@
 from cmath import pi
+from crypt import methods
 import MySQLdb
 from utils.sqlconnect import get_connector
 from flask import Flask, request
@@ -47,10 +48,10 @@ def dbUsers():
     return str(rv)
 
 
-@app.route("/match/profile")
+@app.route("/profile/match")
 def getJobMatches(pid=0):
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    pid = request.args.get("id", type=int)
+    pid = request.args.get("pid", type=int)
 
     cur.execute("select ONetId, ONetJob, ONetDescription from onet")
 
@@ -65,21 +66,36 @@ def getJobMatches(pid=0):
     return json.dumps({"PId": pid, "matches": matchedJobs})
 
 
-@app.route("/user/<aid>/profiles")
-def getUserProfile(aid=0):
-    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cur.execute(
-        """
-        select * from 
-        ((select userId as AId, SurveyProfile as PId from response)
-        union
-        (select * from accountProfile)) AS userProfiles
-        join profile on userProfiles.PId = profile.PId 
-        where AId = %(AId)s
-        """,
-        {"AId": int(aid)},
-    )
-    return json.dumps({"profiles": cur.fetchall()})
+@app.route("/profile/user", methods=['GET', 'POST'])
+def userProfile():
+    aid = request.args.get("aid", type=int)
+    if request.method == 'GET':
+        return getUserProfiles(aid)
+    elif request.method == 'POST':
+        return postUserProfiles(aid)
+
+def getUserProfiles(aid):
+    try:
+        cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+        cur.execute(
+            """
+            select * from 
+            ((select userId as AId, SurveyProfile as PId from response)
+            union
+            (select * from accountProfile)) AS userProfiles
+            join profile on userProfiles.PId = profile.PId 
+            where AId = %(AId)s
+            """,
+            {"AId": aid},
+        )
+        return json.dumps({"profiles": cur.fetchall()})
+    except:
+        return "Error: Couldn't GET user Profiles"
+
+def postUserProfiles(aid):
+    return "user Profile POST not implemente yet"
+
+    
 
 
 @app.route("/jobs")
