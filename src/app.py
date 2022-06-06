@@ -48,7 +48,7 @@ def dbUsers():
     return str(rv)
 
 
-@app.route("/profile", methods=['GET', 'POST'])
+@app.route("/profile", methods=['GET', 'POST', 'PATCH'])
 def profile():
     if request.method == 'GET':
         pid = request.args.get("pid", type=int)
@@ -57,7 +57,9 @@ def profile():
 
         return getProfile(pid)
     elif request.method == 'POST':
-        return addProfile()
+        return addProfile(request.json)
+    elif request.method == 'UPDATE':
+        return updateProfile(pid, request.json)
     else:
         return "{0} not an implemented method".format(request.method)
 
@@ -75,8 +77,38 @@ def getProfile(pid):
         {"PId": pid})
     return json.dumps({"PId": pid, "PName": pro["PName"], "Criteria": cur.fetchall()})
 
-def addProfile():
-    return "Add profile not implemented yet"    
+def addProfile(body):
+    conn = mysql.connect
+    cur = conn.cursor(MySQLdb.cursors.DictCursor)
+    cur.execute("select max(PId) + 1 as PId from profile")
+    r = cur.fetchone()
+    PId = r["PId"]
+    if PId == None:
+        return {"Error": "pid not provided"}, 500
+        
+    cur.execute(
+        """
+        INSERT INTO profile (PId, PName, PType) VALUES (%(PId)s, %(PName)s, %(PType)s)
+        """, 
+        {"PId": PId, "PName": body["PName"], "PType": body["PType"]})
+
+    profileCriteria = []
+    for c in body["Criteria"]:
+        pc = {"CId": c["CId"], "PId": PId, "cValue": c["cValue"], "importanceRating": c["importanceRating"]}
+        profileCriteria.append(pc)
+
+    cur.executemany(
+        """
+        INSERT INTO profileCriteria (CId, PId, cValue, importanceRating) 
+        VALUES (%(CId)s, %(PId)s, %(cValue)s, %(importanceRating)s)
+        """
+    , profileCriteria)
+
+    conn.commit()
+    return {"Msg": "Successfully added profile {0}".format(PId)}, 201
+
+def updateProfile(pid, body):
+    return "UPDATE not implemented"
 
 
 @app.route("/profile/match", methods=['GET', 'POST'])
@@ -116,7 +148,7 @@ def userProfile():
         return getUserProfiles(aid)
     elif request.method == 'POST':
         #for getting matches with profile json templates
-        return postUserProfiles(aid)
+        return postUserProfiles(aid, request.json)
     else:
         return "{0} not an implemented method".format(request.method)
 
@@ -138,8 +170,8 @@ def getUserProfiles(aid):
     except:
         return "Error: Couldn't GET user Profiles"
 
-def postUserProfiles(aid):
-    return "user Profile POST not implemente yet"
+def postUserProfiles(aid, body):
+    return json.dumps(body)
 
 @app.route("/profile/template")
 def getTemplate():
@@ -155,7 +187,7 @@ def getTemplate():
         cp = {"CId": c["CId"],"cName": c["cName"], "cValue": 0, "importanceRating": 0}
         profileCriteria.append(cp)
 
-    profileTemplate = {"PId": 0, "PName": "Template", "Criteria": profileCriteria}
+    profileTemplate = {"PName": "Template", "PType": "Desired", "Criteria": profileCriteria}
     return json.dumps(profileTemplate)
 
 
