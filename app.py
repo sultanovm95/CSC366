@@ -136,7 +136,7 @@ def userProfile():
 
 
 @app.route("/profile/template")
-#@token_required
+@token_required
 def profileTemplate():
     conn = mysql.connect
     try:
@@ -181,6 +181,7 @@ def survey():
         conn.close()
 
 @app.route("/response", methods=['GET', 'POST'])
+@token_required
 def response():
     conn = mysql.connect
     try:
