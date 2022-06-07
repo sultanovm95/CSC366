@@ -129,6 +129,24 @@ def checkProfileBody(body):
     if 'Criteria' not in keys:
         raise Exception("'Criteria' not included in the request", 400)
 
+    def _0to7(value):
+        if value > 7:
+            return 7
+        elif value < 0:
+            return 0
+        return value
+    
+    #Assuming Valid CId
+    for c in body["Criteria"]:
+        cKeys = c.keys()
+        if ('cValue' not in cKeys or 'CId' not in cKeys or 'importanceRating' not in cKeys):
+            raise Exception("""
+                'Criteria' must have json with 'CId', 'cValue', and 'importanceRating' keys
+                """, 400)
+        c["cValue"] = _0to7(c["cValue"])
+        c["importanceRating"] = _0to7(c["importanceRating"])
+
+
 def addProfile(conn, body, PType):
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("select max(PId) + 1 as PId from profile")
