@@ -9,7 +9,6 @@ import json
 import os
 from dotenv import load_dotenv
 
-from matcher import match, getONetJobs, getProfile, match_desired_onet, match_exp_onet
 from user import User
 from matcher import match, getONetJobs, getVectorizedProfile, match_desired_onet, match_exp_onet
 
@@ -303,27 +302,7 @@ def getSurveys():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("select Id, ShortName, Name, Description from survey")
     return json.dumps({"surveys": cur.fetchall()})
-
-
-@app.route("/match")
-def getMatch():
-    cur = mysql.connection.cursor()
-    profile_id = request.json.get("profileId")
-
-    if profile_id is None:
-        return {"Error": "ProfileId not provided"}, 500
-
-    profile, survey = getVectorizedProfile(cur, profile_id=profile_id)
-    if profile is None:
-        return {"Error": "ProfileId not Found"}, 500
-    onet = getONetJobs(cur)
-    if onet is None:
-        return {"Error": "Internal Error, ONet jobs not found"}, 500
-
-    matches = match_exp_onet(profile, onet)
-    print(matches)
-    return json.dumps({"matches": matches})
-
+    
 
 @app.route("/survey")
 def getSurvey():
