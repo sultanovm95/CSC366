@@ -81,7 +81,6 @@ def getProfile(conn, pid):
     try:
         cur.execute("select * from profile where %(PId)s", {"PId": pid})
         pro = cur.fetchone()
-
         cur.execute(
             """
             select criteria.CId, cName, cValue, importanceRating from profileCriteria
@@ -116,6 +115,15 @@ def addDesiredProfile(conn, aid, body):
         conn.rollback()
         return e.args[0], e.args[1]
 
+def checkProfileBody(body):
+    keys = body.keys()
+    if 'PName' not in keys:
+        raise Exception("'PName' not included in the request", 400)
+    if 'PType' not in keys:
+        raise Exception("'PType' not included in the request", 400)
+    if 'Criteria' not in keys:
+        raise Exception("'Criteria' not included in the request", 400)
+
 def addProfile(conn, body, PType):
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("select max(PId) + 1 as PId from profile")
@@ -126,11 +134,7 @@ def addProfile(conn, body, PType):
         if PId == None:
             raise Exception("DB couldn't generate a PId", 500)
         
-        keys = body.keys()
-        if 'PName' not in keys:
-            raise Exception("'PName' not included in the request", 400)
-        if 'Criteria' not in keys:
-            raise Exception("'Criteria' not included in the request", 400)
+        checkProfileBody(body)
         
         cur.execute(
             """
@@ -155,32 +159,36 @@ def addProfile(conn, body, PType):
 
 def updateProfile(conn, pid, body):
 
+    checkProfileBody(body)
+
     if body["PType"] != "Desired":
-        return {"Error": "You can only update desired profiles"}, 400
-    keys = body.keys()
-    if 'PName' not in keys:
-        return {"Error": "'PName' not included in the request"}, 400
-    if 'Criteria' not in keys:
-        return {"Error": "'Criteria' not included in the request"}, 400
+        raise Exception("You can only update desired profiles", 400)
+    
+    try:
+        cur = conn.cursor(MySQLdb.cursors.DictCursor)
+        cur.execute(
+            """
+            UPDATE profile
+            SET PName = %(PName)s
+            WHERE PId = %(PId)s
+            """, 
+            {"PId": pid, "PName": body["PName"]})
 
-    cur = conn.cursor(MySQLdb.cursors.DictCursor)
-    cur.execute(
-        """
-        UPDATE profile
-        SET PName = %(PName)s
-        WHERE PId = %(PId)s
-        """, 
-        {"PId": pid, "PName": body["PName"]})
+        cur.executemany(
+            """
+            UPDATE profileCriteria 
+            SET cValue = %(cValue)s, importanceRating = %(importanceRating)s
+            WHERE PId = {0} AND CId = %(CId)s
+            """.format(int(pid)), 
+            body["Criteria"])
 
-    cur.executemany(
-        """
-        UPDATE profileCriteria 
-        SET cValue = %(cValue)s, importanceRating = %(importanceRating)s
-        WHERE PId = {0} AND CId = %(CId)s
-        """.format(int(pid)), 
-        body["Criteria"])
-
-    return {"Msg": "Successfully updated profile {0}".format(pid)}, 200
+        conn.commit()
+        return {"Msg": "Successfully updated profile {0}".format(pid)}, 200
+    except Exception as e:
+        conn.rollback()
+        return str(e), 500
+    finally:
+        cur.close()
 
 
 @app.route("/profile/match", methods=['GET', 'POST'])
@@ -259,7 +267,7 @@ def getTemplate():
         cp = {"CId": c["CId"],"cName": c["cName"], "cValue": 0, "importanceRating": 0}
         profileCriteria.append(cp)
 
-    profileTemplate = {"PName": "Template", "Criteria": profileCriteria}
+    profileTemplate = {"PName": "Template", "PType": "Desired","Criteria": profileCriteria}
     return json.dumps(profileTemplate)
 
 
