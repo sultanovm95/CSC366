@@ -1,5 +1,6 @@
 from cmath import pi
 import MySQLdb
+from src import queries
 from src.matcher import match
 from src.utils.sqlconnect import get_connector
 from flask import Flask, request
@@ -47,6 +48,18 @@ def dbUsers():
     cur.execute("select user,host from mysql.user")
     rv = cur.fetchall()
     return str(rv)
+
+
+@app.route("/profile")
+def getProfileCriteria():
+    pid = request.json.get("pid")
+
+    if pid is not None:
+        return {
+            "pid": pid,
+            "results": queries.retrieveProfileCriteria(mysql.connection, pid),
+        }, 200
+    return {"Error": "Pid not found"}
 
 
 # Note use https://www.onetonline.org/link/summary/<job code to link to job page>
