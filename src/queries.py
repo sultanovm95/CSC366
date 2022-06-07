@@ -4,31 +4,17 @@ import json
 from src import matcher
 
 def retrieveProfileCriteria(conn, pid):
-    cur = conn.cursor()
-    cur.execute(
+    cur = conn.cursor(MySQLdb.cursors.DictCursor)
+    try:
+        cur.execute(
         f"SELECT profile.pid, ptype, pname, criteria.cName, criteria.cid, cvalue, importanceRating \
             FROM profile, profileCriteria, criteria \
             WHERE profileCriteria.PId = profile.PId AND profile.pid = {pid} AND criteria.cid = profileCriteria.cid\
-            "
-    )
-    result = cur.fetchall()
-    df = pd.DataFrame(
-        result,
-        columns=[
-            "ProfileId",
-            "Type",
-            "Name",
-            "Criteria",
-            "CriteriaId",
-            "Value",
-            "Importance",
-        ],
-    )
+            ")
+        return(json.dumps({"PId": pid, "Criteria": cur.fetchall()}))
+    finally:
+        cur.close()
 
-    #print(df.to_dict(orient="records"))
-    return df.to_dict(orient="records")
-
-#Relagated
 def getProfile(conn, pid):
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
     try:
@@ -43,7 +29,7 @@ def getProfile(conn, pid):
             {"PId": pid})
 
         criteria = cur.fetchall()
-        return json.dumps({"PId": pid, "PName": pro["PName"], "Criteria": criteria})
+        return json.dumps({"PId": pid, "PName": pro["PName"],"PType": pro["PType"], "Criteria": criteria})
     finally:
         cur.close()
 
@@ -58,7 +44,7 @@ def addDesiredProfile(conn, aid, body):
             """,
         {"AId": aid, "PId": PId})
 
-        #conn.commit()
+        conn.commit()
         cur.close()
         return result
     except MySQLdb.DatabaseError as e:
@@ -161,21 +147,31 @@ def updateProfile(conn, pid, body):
         cur.close()
 
 def getJobMatches(conn, pid):
-    cur = conn.cursor(MySQLdb.cursors.DictCursor)
-    cur.execute("select ONetId, ONetJob, ONetDescription from onet")
 
-    matchedJobs = []
-    matches = matcher.match(pid)
-    for m in matches:
-        onetId = m[0]
-        for job in cur:
-            if job["ONetId"] == onetId:
-                matchedJobs.append(job)
+    try:
+        cur = conn.cursor(MySQLdb.cursors.DictCursor)
+        cur.execute("select ONetId, ONetJob, ONetDescription from onet")
 
-    return json.dumps({"PId": pid, "matches": matchedJobs})
+        matchedJobs = []
+        matches = matcher.match(pid)
+        for m in matches:
+            onetId = m[0]
+            for job in cur:
+                if job["ONetId"] == onetId:
+                    matchedJobs.append(job)
 
-def postJobMatches(profileJson):
-    return "matching based on json post not implemented"
+        return json.dumps({"PId": pid, "matches": matchedJobs})
+    finally:
+        cur.close()
+
+def postJobMatches(conn, profileJson):
+    try:
+        cur = conn.cursor()
+        checkProfileBody(profileJson)
+        #matcher.vectorize(profileJson)
+        return "matching based on json post not implemented"
+    finally:
+        cur.close()
 
 def createSurvey(surveyQ, questionA):
     json_data = {"surveyId": surveyQ[0][0], "surveyName": surveyQ[0][1], "elements": []}
@@ -203,21 +199,46 @@ def getUserProfiles(conn, aid):
         cur = conn.cursor(MySQLdb.cursors.DictCursor)
         cur.execute(
             """
-            select * from 
+            select AId, profile.PId as PId, PType, PName from 
             ((select userId as AId, SurveyProfile as PId from response)
             union
             (select * from accountProfile)) AS userProfiles
             join profile on userProfiles.PId = profile.PId 
             where AId = %(AId)s
             """,
-            {"AId": aid},
-        )
-        return json.dumps({"profiles": cur.fetchall()})
+            {"AId": aid},)
+        return json.dumps({"AId": aid,"profiles": cur.fetchall()})
     except:
         return "Error: Couldn't GET user Profiles"
+    finally:
+        cur.close()
 
 def postUserProfiles(conn, aid, body):
     return json.dumps(body)
+
+def getSurvey(conn, sid):
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            select q.SurveyId, ShortName, q.Id as QNum, Question, QuestionType
+            from survey as s 
+            join question as q on s.Id = SurveyId 
+            where s.Id = %(sid)s
+            """,
+            {"sid": sid},
+        )
+        surveyQ = cur.fetchall()
+
+        cur.execute(
+            """select * from questionAcceptableAnswer where SurveyId = %(sid)s order by QuestionId""",
+            {"sid": sid},
+        )
+        questionA = cur.fetchall()
+
+        return createSurvey(surveyQ, questionA)
+    finally:
+        cur.close()
 
 def createQuestion(num, type, prompt, choices):
     qtype = ["dropdown", "matrix"]

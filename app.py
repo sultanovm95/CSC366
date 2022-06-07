@@ -67,7 +67,7 @@ def dbUsers():
 
 
 @app.route("/profile", methods=['GET', 'POST', 'PATCH'])
-#@token_required
+@token_required
 def profile():
     conn = mysql.connect
     try:
@@ -76,10 +76,7 @@ def profile():
             if pid == None:
                 return {"Error": "pid not provided"}, 400
 
-            return {
-                "pid": pid, 
-                "results": queries.retrieveProfileCriteria(conn, pid),
-                }, 200
+            return queries.getProfile(conn, pid), 200
             #return getProfile(conn, pid)
 
         elif request.method == 'POST':
@@ -101,34 +98,45 @@ def profile():
 
 
 @app.route("/profile/match", methods=['GET', 'POST'])
-#@token_required
+@token_required
 def profileMatch(pid=0):
-    if request.method == 'GET':
-        pid = request.args.get("pid", type=int)
-        if pid == None:
-            return {"Error": "pid not provided"}, 400
-        return queries.getJobMatches(pid)
-    elif request.method == 'POST':
-        return queries.postJobMatches({"Profile": "Not Actual"})
+
+    conn = mysql.connect
+    try:
+        if request.method == 'GET':
+            pid = request.args.get("pid", type=int)
+            if pid == None:
+                return {"Error": "pid not provided"}, 400
+            return queries.getJobMatches(conn, pid)
+        elif request.method == 'POST':
+            return queries.postJobMatches(conn, {"Profile": "Not Actual"})
+    finally:
+        conn.close()
 
 
 @app.route("/profile/user", methods=['GET', 'POST'])
-#@token_required
+@token_required
 def userProfile():
-    aid = request.args.get("aid", type=int)
-    if aid == None:
+    conn = mysql.connect
+    try:
+        aid = request.args.get("aid", type=int)
+        if aid == None:
             return {"Error": "aid not provided"}, 400
-    if request.method == 'GET':
-        return queries.getUserProfiles(aid)
-    elif request.method == 'POST':
-        #for getting matches with profile json templates
-        return queries.postUserProfiles(aid, request.json)
-    else:
-        return "{0} not an implemented method".format(request.method)
+        if request.method == 'GET':
+            return queries.getUserProfiles(conn, aid)
+        elif request.method == 'POST':
+            #for getting matches with profile json templates
+            return queries.postUserProfiles(conn, aid, request.json)
+        else:
+            return "{0} not an implemented method".format(request.method)
+    except Exception as e:
+        return str(e), 500
+    finally:
+        conn.close()
 
 
 @app.route("/profile/template")
-#@token_required
+@token_required
 def getTemplate():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("select * from criteria")
@@ -147,7 +155,7 @@ def getTemplate():
 
 
 @app.route("/jobs")
-#@token_required
+@token_required
 def getJobs():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("select ONetId, ONetJob, ONetDescription from onet")
@@ -155,7 +163,7 @@ def getJobs():
 
 
 @app.route("/surveys")
-#@token_required
+@token_required
 def getSurveys():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("select Id, ShortName, Name, Description from survey")
@@ -163,35 +171,24 @@ def getSurveys():
     
 
 @app.route("/survey")
-#@token_required
-def getSurvey():
-    cur = mysql.connection.cursor()
-    sid = request.args.get("id", type=int)
-    if sid == None:
-            return {"Error": "survey id not provided"}, 400
-
-    cur.execute(
-        """
-        select q.SurveyId, ShortName, q.Id as QNum, Question, QuestionType
-        from survey as s 
-        join question as q on s.Id = SurveyId 
-        where s.Id = %(sid)s
-        """,
-        {"sid": sid},
-    )
-    surveyQ = cur.fetchall()
-
-    cur.execute(
-        """select * from questionAcceptableAnswer where SurveyId = %(sid)s order by QuestionId""",
-        {"sid": sid},
-    )
-    questionA = cur.fetchall()
-
-    return queries.createSurvey(surveyQ, questionA)
-
+@token_required
+def survey():
+    conn = mysql.connect
+    try:
+        if request.method == 'GET':
+            sid = request.args.get("sid", type=int)
+            if sid == None:
+                return {"Error": "survey id not provided"}, 400
+            return queries.getSurvey(conn, sid)
+        else:
+            return "{0} not an implemented method".format(request.method)
+    except Exception as e:
+        return str(e), 500
+    finally:
+        conn.close()
 
 @app.route("/match")
-#@token_required
+@token_required
 def getMatch():
     cur = mysql.connection.cursor()
     profile_id = request.json.get("profileId")
