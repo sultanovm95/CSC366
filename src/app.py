@@ -119,14 +119,17 @@ def addProfile(conn, body, PType):
     cur.execute("select max(PId) + 1 as PId from profile")
     r = cur.fetchone()
     PId = r["PId"]
-    if PId == None:
-        return {"Error": "pid not provided"}, 500
-    keys = body.keys()
-    if 'PName' not in keys:
-        raise Exception("'PName' not included in the request", 400)
-    if 'Criteria' not in keys:
-        raise Exception("'Criteria' not included in the request", 400)
+    
     try:
+        if PId == None:
+            raise Exception("DB couldn't generate a PId", 500)
+        
+        keys = body.keys()
+        if 'PName' not in keys:
+            raise Exception("'PName' not included in the request", 400)
+        if 'Criteria' not in keys:
+            raise Exception("'Criteria' not included in the request", 400)
+        
         cur.execute(
             """
             INSERT INTO profile (PId, PName, PType) VALUES (%(PId)s, %(PName)s, %(PType)s)
@@ -141,20 +144,24 @@ def addProfile(conn, body, PType):
         , body["Criteria"])
 
         #Intentionally doesn't commit leave it up to parent call
-        cur.close()
         return {"PId": int(PId), "Msg": "Successfully added profile {0}".format(PId)}, 201
-    except Exception as e:
+    except MySQLdb.DatabaseError as e:
         conn.rollback()
         return str(e), 500
+    finally:
+        cur.close()
 
-
-def updateProfile(pid, body):
-    conn = mysql.connect
-    cur = conn.cursor(MySQLdb.cursors.DictCursor)
+def updateProfile(conn, pid, body):
 
     if body["PType"] != "Desired":
         return {"Error": "You can only update desired profiles"}, 400
+    keys = body.keys()
+    if 'PName' not in keys:
+        return {"Error": "'PName' not included in the request"}, 400
+    if 'Criteria' not in keys:
+        return {"Error": "'Criteria' not included in the request"}, 400
 
+    cur = conn.cursor(MySQLdb.cursors.DictCursor)
     cur.execute(
         """
         UPDATE profile
