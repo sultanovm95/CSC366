@@ -1,7 +1,6 @@
-import pprint
 import pandas as pd
 import numpy as np
-from utils.sqlconnect import get_connector
+from src.utils.sqlconnect import get_connector
 
 def _cossim(s, w):
     size = max(len(s), len(w))

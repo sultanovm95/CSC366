@@ -1,16 +1,18 @@
 from cmath import pi
+from crypt import methods
+import datetime
 import MySQLdb
-from src import queries
-from src.matcher import match
-from src.utils.sqlconnect import get_connector
-from flask import Flask, request
+from flask import Flask, jsonify, request
 from flask_mysqldb import MySQL
 from flask_cors import CORS
 import json
 import os
+from src import queries
+import jwt
 from dotenv import load_dotenv
-
-from src.matcher import getONetJobs, getProfile, match_desired_onet, match_exp_onet
+from functools import wraps
+from src.user import User
+from src.matcher import match, getONetJobs, getVectorizedProfile, match_desired_onet, match_exp_onet
 
 app = Flask(__name__)
 CORS(app)
@@ -18,6 +20,7 @@ CORS(app)
 # Loads Enviroment Variables from .env file use command: 'touch .env' to create
 load_dotenv()
 # need to have the following variables in .env file by name
+app.config['USER_SECRET'] = os.getenv('USER_SECRET')
 USER = os.getenv("MYSQL_USER")
 PASSWORD = os.getenv("PASSWORD")
 PORT = int(os.getenv("PORT"))
@@ -41,6 +44,19 @@ app.config.setdefault("MYSQL_CUSTOM_OPTIONS", None)
 
 mysql = MySQL(app)
 
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.args.get('token')
+        if not token:
+            return jsonify({'message': 'Token is missing!'}), 401
+        try:
+            data = jwt.decode(token, app.config['USER_SECRET'])
+        except:
+            return jsonify({'message': 'Invalid token'}), 401
+        return f(data, *args, kwargs)
+    return decorated
+        
 
 @app.route("/")
 def dbUsers():
@@ -50,55 +66,88 @@ def dbUsers():
     return str(rv)
 
 
-@app.route("/profile")
-def getProfileCriteria():
-    pid = request.json.get("pid")
+@app.route("/profile", methods=['GET', 'POST', 'PATCH'])
+#@token_required
+def profile():
+    conn = mysql.connect
+    try:
+        if request.method == 'GET':
+            pid = request.args.get("pid", type=int)
+            if pid == None:
+                return {"Error": "pid not provided"}, 400
 
-    if pid is not None:
-        return {
-            "pid": pid,
-            "results": queries.retrieveProfileCriteria(mysql.connection, pid),
-        }, 200
-    return {"Error": "Pid not found"}
+            return {
+                "pid": pid, 
+                "results": queries.retrieveProfileCriteria(conn, pid),
+                }, 200
+            #return getProfile(conn, pid)
+
+        elif request.method == 'POST':
+            aid = request.args.get("aid", type=int)
+            if aid == None:
+                return {"Error": "Profile POST requires an aid"}, 400
+            return queries.addDesiredProfile(conn, aid, request.json)
+
+        elif request.method == 'PATCH':
+            pid = request.args.get("pid", type=int)
+            if pid == None:
+                return {"Error": "pid not provided"}, 400
+            return queries.updateProfile(conn, pid, request.json)
+
+        else:
+            return "{0} not an implemented method".format(request.method)
+    finally:
+        conn.close()
 
 
-# Note use https://www.onetonline.org/link/summary/<job code to link to job page>
-@app.route("/match/profile")
-def getJobMatches(pid=0):
+@app.route("/profile/match", methods=['GET', 'POST'])
+#@token_required
+def profileMatch(pid=0):
+    if request.method == 'GET':
+        pid = request.args.get("pid", type=int)
+        if pid == None:
+            return {"Error": "pid not provided"}, 400
+        return queries.getJobMatches(pid)
+    elif request.method == 'POST':
+        return queries.postJobMatches({"Profile": "Not Actual"})
+
+
+@app.route("/profile/user", methods=['GET', 'POST'])
+#@token_required
+def userProfile():
+    aid = request.args.get("aid", type=int)
+    if aid == None:
+            return {"Error": "aid not provided"}, 400
+    if request.method == 'GET':
+        return queries.getUserProfiles(aid)
+    elif request.method == 'POST':
+        #for getting matches with profile json templates
+        return queries.postUserProfiles(aid, request.json)
+    else:
+        return "{0} not an implemented method".format(request.method)
+
+
+@app.route("/profile/template")
+#@token_required
+def getTemplate():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    pid = request.args.get("id", type=int)
+    cur.execute("select * from criteria")
+    criterion = cur.fetchall()
 
-    cur.execute("select ONetId, ONetJob, ONetDescription from onet")
+    if criterion == None:
+        return {"Error": "Couldn't connect to the DB"}, 500
 
-    matchedJobs = []
-    matches = match(pid)
-    for m in matches:
-        onetId = m[0]
-        for job in cur:
-            if job["ONetId"] == onetId:
-                matchedJobs.append(job)
+    profileCriteria = []
+    for c in criterion:
+        cp = {"CId": c["CId"],"cName": c["cName"], "cValue": 0, "importanceRating": 0}
+        profileCriteria.append(cp)
 
-    return json.dumps({"PId": pid, "matches": matchedJobs})
-
-
-@app.route("/user/<aid>/profiles")
-def getUserProfile(aid=0):
-    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cur.execute(
-        """
-        select * from 
-        ((select userId as AId, SurveyProfile as PId from response)
-        union
-        (select * from accountProfile)) AS userProfiles
-        join profile on userProfiles.PId = profile.PId 
-        where AId = %(AId)s
-        """,
-        {"AId": int(aid)},
-    )
-    return json.dumps({"jobs": cur.fetchall()})
+    profileTemplate = {"PName": "Template", "PType": "Desired","Criteria": profileCriteria}
+    return json.dumps(profileTemplate)
 
 
 @app.route("/jobs")
+#@token_required
 def getJobs():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("select ONetId, ONetJob, ONetDescription from onet")
@@ -106,16 +155,20 @@ def getJobs():
 
 
 @app.route("/surveys")
+#@token_required
 def getSurveys():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("select Id, ShortName, Name, Description from survey")
     return json.dumps({"surveys": cur.fetchall()})
-
+    
 
 @app.route("/survey")
+#@token_required
 def getSurvey():
     cur = mysql.connection.cursor()
     sid = request.args.get("id", type=int)
+    if sid == None:
+            return {"Error": "survey id not provided"}, 400
 
     cur.execute(
         """
@@ -134,10 +187,11 @@ def getSurvey():
     )
     questionA = cur.fetchall()
 
-    return createSurvey(surveyQ, questionA)
+    return queries.createSurvey(surveyQ, questionA)
 
 
 @app.route("/match")
+#@token_required
 def getMatch():
     cur = mysql.connection.cursor()
     profile_id = request.json.get("profileId")
@@ -145,7 +199,7 @@ def getMatch():
     if profile_id is None:
         return {"Error": "ProfileId not provided"}, 500
 
-    profile, survey = getProfile(cur, profile_id=profile_id)
+    profile, survey = getVectorizedProfile(cur, profile_id=profile_id)
     if profile is None:
         return {"Error": "ProfileId not Found"}, 500
     onet = getONetJobs(cur)
@@ -156,49 +210,43 @@ def getMatch():
     print(matches)
     return {"matches": matches}
 
+@app.route("/users/signup", methods=["POST"])
+def signup():
+    if request.method == "POST":
+        user = {}
+        user['name'] = request.form['name']
+        user['email'] = request.form['email']
+        user['password'] = request.form['password']
+        user['account_type'] = 'user'
+        
+        u = User()
+        if u.check_user(user['email']):
+            return {"Error": "User already exists"}, 500
+        else:
+            u.create_user(user)
+            payload = {'name': user['name'],
+                       'email': user['email'],
+                       'account_type': user['account_type'],
+                       'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)}
+            token = jwt.encode(payload, app.config['USER_SECRET'])
+            return jsonify({'token': token.decode('UTF-8')})
 
-def createSurvey(surveyQ, questionA):
-    json_data = {"surveyId": surveyQ[0][0], "surveyName": surveyQ[0][1], "elements": []}
-    i = 0
-    questionALen = len(questionA)
-    for q in surveyQ:
-        # surveyQ of tuple (SId, Name, Number, prompt, type)
-        qNum = q[2]
-        type = q[4]
-        prompt = q[3]
 
-        choices = []
-        # questionA of tuple (SurveyId, QNum, AValue, AText, comment)
-        while i < questionALen and questionA[i][1] == qNum:
-            qA = questionA[i]
-            choices.append({"value": int(qA[2]), "text": qA[3]})
-            i += 1
-
-        r = createQuestion(qNum, type, prompt, choices)
-        json_data["elements"].append(r)
-    return json.dumps(json_data)
-
-
-def createQuestion(num, type, prompt, choices):
-    qtype = ["dropdown", "matrix"]
-    if type == 1:
-        return {
-            "name": str(num),
-            "type": qtype[type],
-            "title": prompt,
-            "isRequired": True,
-            "columns": choices,
-            "rows": [{"value": "", "text": ""}],
-        }
-    else:
-        return {
-            "name": str(num),
-            "type": qtype[type],
-            "title": prompt,
-            "isRequired": True,
-            "choices": choices,
-        }
-
+@app.route("/users/login", methods=["POST"])
+def login():
+    if request.method == "POST":
+        user = {}
+        user['email'] = request.form['email']
+        user['password'] = request.form['password']
+        
+        u = User()
+        if u.verify_user(user):
+            payload = {'email': user['email'],
+                       'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)}
+            token = jwt.encode(payload, app.config['USER_SECRET'])
+            return jsonify({'token': token.decode('UTF-8')})
+        else:
+            return {"Error": "User not found"}, 500
 
 if __name__ == "__main__":
     app.run(host="localhost", port=5000, debug=True)
