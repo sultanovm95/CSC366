@@ -78,20 +78,22 @@ def profile():
 
 def getProfile(conn, pid):
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
-    cur.execute("select * from profile where %(PId)s", {"PId": pid})
-    pro = cur.fetchone()
+    try:
+        cur.execute("select * from profile where %(PId)s", {"PId": pid})
+        pro = cur.fetchone()
 
-    cur.execute(
-        """
-        select criteria.CId, cName, cValue, importanceRating from profileCriteria
-        join criteria on criteria.CId = profileCriteria.CId
-        where PId = %(PId)s;
-        """, 
-        {"PId": pid})
+        cur.execute(
+            """
+            select criteria.CId, cName, cValue, importanceRating from profileCriteria
+            join criteria on criteria.CId = profileCriteria.CId
+            where PId = %(PId)s;
+            """, 
+            {"PId": pid})
 
-    criteria = cur.fetchall()
-    cur.close()
-    return json.dumps({"PId": pid, "PName": pro["PName"], "Criteria": criteria})
+        criteria = cur.fetchall()
+        return json.dumps({"PId": pid, "PName": pro["PName"], "Criteria": criteria})
+    finally:
+        cur.close()
 
 def addDesiredProfile(conn, aid, body):
     try:
