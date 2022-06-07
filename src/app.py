@@ -9,6 +9,8 @@ import json
 import os
 from dotenv import load_dotenv
 
+from matcher import match, getONetJobs, getProfile, match_desired_onet, match_exp_onet
+from user import User
 from matcher import match, getONetJobs, getVectorizedProfile, match_desired_onet, match_exp_onet
 
 app = Flask(__name__)
@@ -348,6 +350,56 @@ def getSurvey():
     questionA = cur.fetchall()
 
     return createSurvey(surveyQ, questionA)
+
+
+@app.route("/match")
+def getMatch():
+    cur = mysql.connection.cursor()
+    profile_id = request.json.get("profileId")
+
+    if profile_id is None:
+        return {"Error": "ProfileId not provided"}, 500
+
+    profile, survey = getProfile(cur, profile_id=profile_id)
+    if profile is None:
+        return {"Error": "ProfileId not Found"}, 500
+    onet = getONetJobs(cur)
+    if onet is None:
+        return {"Error": "Internal Error, ONet jobs not found"}, 500
+
+    matches = match_exp_onet(profile, onet)
+    print(matches)
+    return {"matches": matches}
+
+@app.route("/users/signup", methods=["POST"])
+def signup():
+    if request.method == "POST":
+        user = {}
+        user['name'] = request.form['name']
+        user['email'] = request.form['email']
+        user['password'] = request.form['password']
+        user['account_type'] = 'user'
+        
+        u = User()
+        if u.check_user(user['email']):
+            return {"Error": "User already exists"}, 500
+        else:
+            u.create_user(user)
+            return {"Success": "User created"}, 201
+
+@app.route("/users/login", methods=["POST"])
+def login():
+    if request.method == "POST":
+        user = {}
+        user['email'] = request.form['email']
+        user['password'] = request.form['password']
+        
+        u = User()
+        if u.verify_user(user):
+            return {"Success": "User verified"}, 201
+        else:
+            return {"Error": "User not found"}, 500
+
 
 def createSurvey(surveyQ, questionA):
     json_data = {"surveyId": surveyQ[0][0], "surveyName": surveyQ[0][1], "elements": []}
