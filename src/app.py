@@ -342,7 +342,7 @@ def getMatch():
     if profile_id is None:
         return {"Error": "ProfileId not provided"}, 500
 
-    profile, survey = getProfile(cur, profile_id=profile_id)
+    profile, survey = getVectorizedProfile(cur, profile_id=profile_id)
     if profile is None:
         return {"Error": "ProfileId not Found"}, 500
     onet = getONetJobs(cur)
