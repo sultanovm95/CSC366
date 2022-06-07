@@ -136,23 +136,16 @@ def userProfile():
 
 
 @app.route("/profile/template")
-@token_required
-def getTemplate():
-    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cur.execute("select * from criteria")
-    criterion = cur.fetchall()
-
-    if criterion == None:
-        return {"Error": "Couldn't connect to the DB"}, 500
-
-    profileCriteria = []
-    for c in criterion:
-        cp = {"CId": c["CId"],"cName": c["cName"], "cValue": 0, "importanceRating": 0}
-        profileCriteria.append(cp)
-
-    profileTemplate = {"PName": "Template", "PType": "Desired","Criteria": profileCriteria}
-    return json.dumps(profileTemplate)
-
+#@token_required
+def profileTemplate():
+    conn = mysql.connect
+    try:
+        if request.method == 'GET':
+            return json.dumps(queries.getTemplate(conn))
+    except Exception as e:
+        return str(e), 500
+    finally:
+        conn.close()
 
 @app.route("/jobs")
 @token_required
@@ -178,11 +171,30 @@ def survey():
         if request.method == 'GET':
             sid = request.args.get("sid", type=int)
             if sid == None:
-                return {"Error": "survey id not provided"}, 400
+                return {"Error": "survey sid not provided"}, 400
             return queries.getSurvey(conn, sid)
         else:
             return "{0} not an implemented method".format(request.method)
     except Exception as e:
+        return str(e), 500
+    finally:
+        conn.close()
+
+@app.route("/response", methods=['GET', 'POST'])
+def response():
+    conn = mysql.connect
+    try:
+        aid = request.args.get("aid", type=int)
+        if aid == None:
+            return {"Error": "Account aid not provided"}, 400
+        if request.method == 'GET':
+            return queries.getResponse(conn, aid)
+        elif request.method == 'POST':
+            body = request.json
+            if body == None:
+                return {"Error": "No response payload sent"}, 400
+            return queries.addResponse(conn, aid, body)
+    except MySQLdb.DatabaseError as e:
         return str(e), 500
     finally:
         conn.close()

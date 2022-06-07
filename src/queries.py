@@ -216,6 +216,24 @@ def getUserProfiles(conn, aid):
 def postUserProfiles(conn, aid, body):
     return json.dumps(body)
 
+def getTemplate(conn):
+    cur = conn.cursor(MySQLdb.cursors.DictCursor)
+    try:
+        cur.execute("select * from criteria")
+        criterion = cur.fetchall()
+        if criterion == None:
+            return {"Error": "Couldn't connect to the DB"}, 500
+
+        profileCriteria = []
+        for c in criterion:
+            cp = {"CId": c["CId"],"cName": c["cName"], "cValue": 0, "importanceRating": 4}
+            profileCriteria.append(cp)
+
+        profileTemplate = {"PName": "Template", "PType": "Desired","Criteria": profileCriteria}
+        return profileTemplate
+    finally:
+        cur.close()
+
 def getSurvey(conn, sid):
     try:
         cur = conn.cursor()
@@ -258,4 +276,79 @@ def createQuestion(num, type, prompt, choices):
             "title": prompt,
             "isRequired": True,
             "choices": choices,
-        }
+        }    
+
+def getResponse(conn, aid):
+    try:
+        cur = conn.cursor(MySQLdb.cursors.DictCursor)
+        cur.execute("select * from response where UserId = %(AId)s", {"AId": aid})
+        return json.dumps({"AId": aid,"Responses": cur.fetchall()})
+    finally:
+        cur.close()
+
+def generateResponseProfile(conn, qMap):
+    profile = getTemplate(conn)
+    for c in profile["Criteria"]:
+        cName = c["cName"]
+        cValue = 0
+        cnt = 0
+        for q in qMap:
+            #maybe check same with qMap[a]["qNum"] == a
+            if q["ProfileCharacteristic"] == cName and "cValue" in q:
+                cValue += q["cValue"]
+                cnt += 1
+        if cnt > 0:
+            c["cValue"] = cValue / cnt
+    
+    return profile   
+
+def addResponse(conn, aid, body):
+
+    #body = {"usedId": "123ABC", "SId": 1, "answers": {1: 10, 2: 1, 3: 3, 4: 3, 5: 2, 6: 1, 7: 2}}
+    
+    try:
+        sid = body["SId"]
+        cur = conn.cursor(MySQLdb.cursors.DictCursor)
+        cur.execute(
+            """
+            select Id as qNum, ProfileCharacteristic 
+            from question 
+            where SurveyId = %(SId)s
+            """, {"SId": sid})
+
+        qMap = cur.fetchall()
+        answers = body["answers"]
+
+        for q in qMap:
+            q["cValue"] = 0
+        
+        for key in answers:
+            qNum = int(key)
+            qMap[qNum]["cValue"] = answers[key]
+        
+        profile = generateResponseProfile(conn, qMap)
+        pid = addProfile(conn, profile, "Experience")[0]["PId"]
+
+        cur.execute("select max(Id + 1) as RId from response")
+        rid = cur.fetchone()["RId"]
+
+        cur.execute(
+        """
+        INSERT INTO response (Id, UserId, SurveyId, SurveyProfile, AnswerDate) 
+        VALUES (%(RId)s, %(AId)s, %(SId)s, %(PId)s, NOW())
+        """, {"RId": rid, "AId": aid, "SId": sid, "PId": pid})
+
+        cur.executemany(
+        """
+        INSERT INTO answers (QuestionId, ResponseId, AnswerValue) 
+        VALUES (%(qNum)s, {0}, %(cValue)s)
+        """.format(rid), qMap)
+
+        conn.commit()
+        return {"Msg": "Successfully added survey response"}, 201
+
+    except MySQLdb.DatabaseError as e:
+        conn.rollback()
+        return str(e), 500
+    finally:
+        cur.close()
