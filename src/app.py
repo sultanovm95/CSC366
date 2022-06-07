@@ -1,12 +1,14 @@
 from cmath import pi
 from crypt import methods
+import datetime
 import MySQLdb
 from utils.sqlconnect import get_connector
-from flask import Flask, request
+from flask import Flask, jsonify, request
 from flask_mysqldb import MySQL
 from flask_cors import CORS
 import json
 import os
+import jwt
 from dotenv import load_dotenv
 
 from user import User
@@ -18,6 +20,7 @@ CORS(app)
 # Loads Enviroment Variables from .env file use command: 'touch .env' to create
 load_dotenv()
 # need to have the following variables in .env file by name
+app.config['USER_SECRET'] = os.getenv('USER_SECRET')
 USER = os.getenv("MYSQL_USER")
 PASSWORD = os.getenv("PASSWORD")
 PORT = int(os.getenv("PORT"))
@@ -364,7 +367,12 @@ def signup():
             return {"Error": "User already exists"}, 500
         else:
             u.create_user(user)
-            return {"Success": "User created"}, 201
+            payload = {'name': user['name'],
+                       'email': user['email'],
+                       'account_type': user['account_type'],
+                       'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)}
+            token = jwt.encode(payload, app.config['USER_SECRET'])
+            return jsonify({'token': token.decode('UTF-8')})
 
 @app.route("/users/login", methods=["POST"])
 def login():
@@ -375,7 +383,10 @@ def login():
         
         u = User()
         if u.verify_user(user):
-            return {"Success": "User verified"}, 201
+            payload = {'email': user['email'],
+                       'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)}
+            token = jwt.encode(payload, app.config['USER_SECRET'])
+            return jsonify({'token': token.decode('UTF-8')})
         else:
             return {"Error": "User not found"}, 500
 
