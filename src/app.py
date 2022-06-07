@@ -9,6 +9,7 @@ import os
 from dotenv import load_dotenv
 
 from matcher import match, getONetJobs, getProfile, match_desired_onet, match_exp_onet
+from user import User
 
 app = Flask(__name__)
 CORS(app)
@@ -141,6 +142,35 @@ def getMatch():
     matches = match_exp_onet(profile, onet)
     print(matches)
     return {"matches": matches}
+
+@app.route("/users/signup", methods=["POST"])
+def signup():
+    if request.method == "POST":
+        user = {}
+        user['name'] = request.form['name']
+        user['email'] = request.form['email']
+        user['password'] = request.form['password']
+        user['account_type'] = 'user'
+        
+        u = User()
+        if u.check_user(user['email']):
+            return {"Error": "User already exists"}, 500
+        else:
+            u.create_user(user)
+            return {"Success": "User created"}, 201
+
+@app.route("/users/login", methods=["POST"])
+def login():
+    if request.method == "POST":
+        user = {}
+        user['email'] = request.form['email']
+        user['password'] = request.form['password']
+        
+        u = User()
+        if u.verify_user(user):
+            return {"Success": "User verified"}, 201
+        else:
+            return {"Error": "User not found"}, 500
 
 
 def createSurvey(surveyQ, questionA):
