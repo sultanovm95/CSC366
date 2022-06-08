@@ -92,26 +92,25 @@ class User:
         try:
             conn = MySQLdb.connect(host=HOST, port=PORT, user=USER, database=DB)
             # create a cursor
-            cur = conn.cursor()
+            cur = conn.cursor(MySQLdb.cursors.DictCursor)
             # execute the query
             cur.execute('''
-                        SELECT password 
+                        SELECT Id, password
                         FROM account 
                         WHERE email = %(email)s''', 
                         {'email': user['email']})
             # fetch the data
-            db_password = cur.fetchone()
-            
-            if db_password:
-                if bcrypt.checkpw(user['password'].encode('utf-8'), db_password[0].encode('utf-8')):
-                    return True
+            account = cur.fetchone()
+            if account:
+                if bcrypt.checkpw(user['password'].encode('utf-8'), account["password"].encode('utf-8')):
+                    return account["Id"]
             
             # close the cursor
             cur.close()
             # close connection
             conn.close()
             
-            return False            
+            return -1            
         except Exception as e:
             print(e)
             return {'message': 'Something went wrong'}, 500

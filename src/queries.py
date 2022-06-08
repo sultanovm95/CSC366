@@ -360,7 +360,6 @@ def generateResponseProfile(conn, qMap):
 def addResponse(conn, aid, body):
 
     # body = {"usedId": "123ABC", "SId": 1, "answers": {1: 10, 2: 1, 3: 3, 4: 3, 5: 2, 6: 1, 7: 2}}
-
     try:
         sid = body["SId"]
         cur = conn.cursor(MySQLdb.cursors.DictCursor)

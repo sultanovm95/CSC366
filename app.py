@@ -74,11 +74,12 @@ def login():
         user['password'] = request.json['password']
         
         u = User()
-        if u.verify_user(user):
+        aid = u.verify_user(user)
+        if aid >= 0:
             payload = {'email': user['email'],
+                       'AId': aid,
                        'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)}
             token = create_access_token(identity=payload)
-            print(token)
             return jsonify({'token': token}), 200
         else:
             return {"Error": "User not found"}, 500
@@ -179,8 +180,6 @@ def profileTemplate():
 @app.route("/jobs", methods=['GET'])
 @jwt_required()
 def getJobs():
-    #current_user = get_jwt_identity()
-    #print(current_user)
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     jobType = request.args.get("jobType", type=str)
     if (jobType == None or jobType == "All"):
@@ -190,7 +189,7 @@ def getJobs():
     return json.dumps({"jobs": cur.fetchall()})
 
 @app.route("/jobs/descriptions")
-# @token_required
+#@token_required()
 def getJobDescriptions():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("select distinct ONetDescription from onet")
