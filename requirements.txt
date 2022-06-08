@@ -28,3 +28,4 @@ Werkzeug==2.1.2
 xlrd==2.0.1
 zipp==3.8.0
 python-dotenv==0.20.0
+flask-jwt-extended==4.4.1
