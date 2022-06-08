@@ -45,21 +45,6 @@ app.config.setdefault("MYSQL_CUSTOM_OPTIONS", None)
 mysql = MySQL(app)
 
 
-def token_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        token = request.args.get("token")
-        if not token:
-            return jsonify({"message": "Token is missing!"}), 401
-        try:
-            data = jwt.decode(token, app.config["USER_SECRET"])
-        except:
-            return jsonify({"message": "Invalid token"}), 401
-        return f(data, *args, kwargs)
-
-    return decorated
-
-
 @app.route("/")
 def dbUsers():
     cur = mysql.connection.cursor()
@@ -76,9 +61,26 @@ def getCriteriaValues():
     )
     return json.dumps({"criteria": cur.fetchall()})
 
+@app.route("/users/login", methods=["POST"])
+def login():
+    if request.method == "POST":
+        user = {}
+        user["email"] = request.form["email"]
+        user["password"] = request.form["password"]
+
+        u = User()
+        if u.verify_user(user):
+            payload = {
+                "email": user["email"],
+                "exp": datetime.datetime.utcnow() + datetime.timedelta(days=1),
+            }
+            token = jwt.encode(payload, app.config["USER_SECRET"])
+            return jsonify({"token": token.decode("UTF-8")})
+        else:
+            return {"Error": "User not found"}, 500
 
 @app.route("/profile", methods=['GET', 'POST', 'PATCH'])
-@jwt_required
+@jwt_required()
 def profile():
     conn = mysql.connect
     try:
@@ -109,7 +111,7 @@ def profile():
 
 
 @app.route("/profile/match", methods=['GET', 'POST'])
-@jwt_required
+@jwt_required()
 def profileMatch(pid=0):
 
     conn = mysql.connect
@@ -126,7 +128,7 @@ def profileMatch(pid=0):
 
 
 @app.route("/profile/user", methods=['GET', 'POST'])
-@jwt_required
+@jwt_required()
 def userProfile():
     conn = mysql.connect
     try:
@@ -147,7 +149,7 @@ def userProfile():
 
 
 @app.route("/profile/template")
-@jwt_required
+@jwt_required()
 def profileTemplate():
     conn = mysql.connect
     try:
@@ -160,7 +162,6 @@ def profileTemplate():
 
 
 @app.route("/jobs")
-# @token_required
 def getJobs():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("select ONetId, ONetJob, ONetDescription from onet")
@@ -168,7 +169,7 @@ def getJobs():
 
 
 @app.route("/surveys")
-@jwt_required
+@jwt_required()
 def getSurveys():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("select Id, ShortName, Name, Description from survey")
@@ -176,7 +177,7 @@ def getSurveys():
 
 
 @app.route("/survey")
-@jwt_required
+@jwt_required()
 def survey():
     conn = mysql.connect
     try:
@@ -193,7 +194,7 @@ def survey():
         conn.close()
 
 @app.route("/response", methods=['GET', 'POST'])
-@jwt_required
+@jwt_required()
 def response():
     conn = mysql.connect
     try:
@@ -214,7 +215,7 @@ def response():
 
 
 @app.route("/match")
-@jwt_required
+@jwt_required()
 def getMatch():
     cur = mysql.connection.cursor()
     profile_id = request.json.get("profileId")
@@ -257,40 +258,17 @@ def signup():
             token = jwt.encode(payload, app.config["USER_SECRET"])
             return jsonify({"token": token.decode("UTF-8")}), 201
 
-
-@app.route("/users/login", methods=["POST"])
-def login():
-    if request.method == "POST":
-        user = {}
-        user["email"] = request.form["email"]
-        user["password"] = request.form["password"]
-
-        u = User()
-        if u.verify_user(user):
-            payload = {
-                "email": user["email"],
-                "exp": datetime.datetime.utcnow() + datetime.timedelta(days=1),
-            }
-            token = jwt.encode(payload, app.config["USER_SECRET"])
-            return jsonify({"token": token.decode("UTF-8")})
-        else:
-            return {"Error": "User not found"}, 500
-
 @app.route("/delete", methods=["POST"])
-# @jwt_required()
+@jwt_required()
 def delete():
     if request.method == "POST":
-        curr_user = 1
-        # curr_user = get_jwt_identity()
+        curr_user = get_jwt_identity()
         profile_id = request.json.get("pid")
 
         if profile_id:
-            result = operations.delete_profile(mysql.connection, curr_user, profile_id=profile_id)
-
-            if result == -1:
-                return {"Error": "UserId doesn't own profileId"}
-
-            return {"delete": profile_id}
+            conn = mysql.connection
+            result = operations.delete_profile(conn, curr_user, profile_id=profile_id)
+            return result
         return {"Error", "ProfileId not found"}, 500
     return {"Error": "Post request only"}, 500
 
