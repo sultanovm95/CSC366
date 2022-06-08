@@ -6,12 +6,7 @@ from flask_cors import CORS
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import json
 import os
-<<<<<<< HEAD
-from src import queries
-=======
-import jwt
 from src import operations, queries
->>>>>>> fff9f48d66aca6bcfb248d22543707cc3f17ecf0
 from dotenv import load_dotenv
 from src.user import User
 from src.matcher import match, getONetJobs, getVectorizedProfile, match_desired_onet, match_exp_onet
@@ -23,10 +18,6 @@ CORS(app)
 # Loads Enviroment Variables from .env file use command: 'touch .env' to create
 load_dotenv()
 # need to have the following variables in .env file by name
-<<<<<<< HEAD
-=======
-app.config["USER_SECRET"] = os.getenv("USER_SECRET")
->>>>>>> fff9f48d66aca6bcfb248d22543707cc3f17ecf0
 USER = os.getenv("MYSQL_USER")
 PASSWORD = os.getenv("PASSWORD")
 PORT = int(os.getenv("PORT"))
