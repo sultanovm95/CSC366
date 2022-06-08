@@ -38,7 +38,7 @@ app.config.setdefault("MYSQL_CURSORCLASS", None)
 app.config.setdefault("MYSQL_AUTOCOMMIT", False)
 app.config.setdefault("MYSQL_CUSTOM_OPTIONS", None)
 app.config["JWT_SECRET_KEY"] = os.getenv('USER_SECRET')
-app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 86400
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 864000
 
 JWTManager(app)
 mysql = MySQL(app)
@@ -103,6 +103,8 @@ def getCriteriaValues():
 @jwt_required()
 def profile():
     conn = mysql.connect
+    account = get_jwt_identity()
+    aid = account["AId"]
     try:
         if request.method == "GET":
             pid = request.args.get("pid", type=int)
@@ -112,7 +114,6 @@ def profile():
             return queries.getProfile(conn, pid), 200
 
         elif request.method == "POST":
-            aid = request.args.get("aid", type=int)
             if aid == None:
                 return {"Error": "Profile POST requires an aid"}, 400
             return queries.addDesiredProfile(conn, aid, request.json)
@@ -165,7 +166,7 @@ def userProfile():
         conn.close()
 
 @app.route("/profile/template")
-@jwt_required()
+#@jwt_required()
 def profileTemplate():
     conn = mysql.connect
     try:
@@ -175,6 +176,7 @@ def profileTemplate():
         return str(e), 500
     finally:
         conn.close()
+
 
 @app.route("/jobs", methods=['GET'])
 #@jwt_required()
@@ -187,12 +189,14 @@ def getJobs():
         cur.execute("select ONetId, ONetJob, ONetDescription from onet where ONetDescription = \"" + jobType + "\"")
     return json.dumps({"jobs": cur.fetchall()})
 
+
 @app.route("/jobs/descriptions")
 #@token_required()
 def getJobDescriptions():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("select distinct ONetDescription from onet")
     return json.dumps({"jobDescriptions": cur.fetchall()})
+
 
 @app.route("/surveys")
 @jwt_required()
