@@ -244,11 +244,11 @@ def getUserProfiles(conn, aid):
             union
             (select * from accountProfile)) AS userProfiles
             join profile on userProfiles.PId = profile.PId 
+            where AId = %(AId)s
             """,
             {"AId": aid},
             # , "profileType": profileType
         )
-        # where AId = %(AId)s
         return json.dumps({"AId": aid, "profiles": cur.fetchall()})
     except:
         return "Error: Couldn't GET user Profiles"
@@ -315,23 +315,13 @@ def getSurvey(conn, sid):
 
 def createQuestion(num, type, prompt, choices):
     qtype = ["dropdown", "matrix"]
-    if type == 1:
-        return {
-            "name": str(num),
-            "type": qtype[type],
-            "title": prompt,
-            "isRequired": True,
-            "columns": choices,
-            "rows": [{"value": "", "text": ""}],
-        }
-    else:
-        return {
-            "name": str(num),
-            "type": qtype[type],
-            "title": prompt,
-            "isRequired": True,
-            "choices": choices,
-        }
+    return {
+        "name": str(num),
+        "type": "dropdown",
+        "title": prompt,
+        "isRequired": True,
+        "choices": choices,
+    }
 
 
 def getResponse(conn, aid):
