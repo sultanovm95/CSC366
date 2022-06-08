@@ -11,6 +11,8 @@ PORT = int(os.getenv("PORT"))
 # Either Absolute path to dir, relative path, or nothing
 DIRPATH = os.getenv("DIRPATH")
 DB = os.getenv("MYSQL_DB")
+HOST = os.getenv("MYSQL_HOST")
+USER = os.getenv("MYSQL_USER")
 
 class User:
     def __init__(self):
@@ -25,7 +27,7 @@ class User:
         Create a new user
         '''
         try:
-            conn = MySQLdb.connect(host="127.0.0.1", port=PORT, user="root", database=DB)
+            conn = MySQLdb.connect(host=HOST, port=PORT, user=USER, database=DB)
             # create a cursor
             cur = conn.cursor()
             # find max id and set new id for the user
@@ -60,7 +62,7 @@ class User:
         Check if a user has already exists
         '''
         try:
-            conn = MySQLdb.connect(host="127.0.0.1", port=PORT, user="root", database=DB)
+            conn = MySQLdb.connect(host=HOST, port=PORT, user=USER, database=DB)
             # create a cursor
             cur = conn.cursor()
             # execute the query
@@ -87,7 +89,7 @@ class User:
         Verify if input user match with DB user
         '''
         try:
-            conn = MySQLdb.connect(host="127.0.0.1", port=PORT, user="root", database=DB)
+            conn = MySQLdb.connect(host=HOST, port=PORT, user=USER, database=DB)
             # create a cursor
             cur = conn.cursor()
             # execute the query
@@ -118,7 +120,7 @@ class User:
         Update a user
         '''
         try:
-            conn = MySQLdb.connect(host="127.0.0.1", port=PORT, user="root", database=DB)
+            conn = MySQLdb.connect(host=HOST, port=PORT, user=USER, database=DB)
             hashed_password = bcrypt.hashpw(user['password'].encode('utf-8'), self.salt)
             # create a cursor
             cur = conn.cursor()
@@ -144,7 +146,7 @@ class User:
         Delete a user
         '''
         try:
-            conn = MySQLdb.connect(host="127.0.0.1", port=PORT, user="root", database=DB)
+            conn = MySQLdb.connect(host=HOST, port=PORT, user=USER, database=DB)
             # create a cursor
             cur = conn.cursor()
             # execute the query

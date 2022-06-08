@@ -1,5 +1,3 @@
-from cmath import pi
-from crypt import methods
 import datetime
 import MySQLdb
 from flask import Flask, jsonify, request
@@ -223,14 +221,15 @@ def getMatch():
 @app.route("/users/signup", methods=["POST"])
 def signup():
     if request.method == "POST":
+        print(request.json)
         user = {}
-        user['name'] = request.form['name']
-        user['email'] = request.form['email']
-        user['password'] = request.form['password']
+        user['name'] = request.json['firstName'] + " " + request.json['lastName']
+        user['email'] = request.json['email']
+        user['password'] = request.json['password']
         user['account_type'] = 'user'
         
         u = User()
-        if u.check_user(user['email']):
+        if u.check_user(user):
             return {"Error": "User already exists"}, 500
         else:
             u.create_user(user)
