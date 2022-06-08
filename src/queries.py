@@ -22,7 +22,7 @@ def retrieveProfileCriteria(conn, pid):
 def getProfile(conn, pid):
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
     try:
-        cur.execute("select * from profile where %(PId)s", {"PId": pid})
+        cur.execute("select * from profile where pid=%(PId)s", {"PId": pid})
         pro = cur.fetchone()
         cur.execute(
             """
