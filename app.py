@@ -58,9 +58,8 @@ def getCriteriaValues():
     cur.execute("select CId,cName,cDescription,4 as cValue,4 as importanceRating from criteria")
     return json.dumps({"criteria": cur.fetchall()})
 
-
-@app.route("/profile", methods=['GET', 'POST', 'PATCH'])
 @jwt_required
+@app.route("/profile", methods=['GET', 'POST', 'PATCH'])
 def profile():
     conn = mysql.connect
     try:
@@ -88,9 +87,8 @@ def profile():
     finally:
         conn.close()
 
-
-@app.route("/profile/match", methods=['GET', 'POST'])
 @jwt_required
+@app.route("/profile/match", methods=['GET', 'POST'])
 def profileMatch(pid=0):
     conn = mysql.connect
     try:
@@ -104,9 +102,8 @@ def profileMatch(pid=0):
     finally:
         conn.close()
 
-
-@app.route("/profile/user", methods=['GET', 'POST'])
 @jwt_required
+@app.route("/profile/user", methods=['GET', 'POST'])
 def userProfile():
     conn = mysql.connect
     try:
@@ -125,9 +122,8 @@ def userProfile():
     finally:
         conn.close()
 
-
-@app.route("/profile/template")
 @jwt_required
+@app.route("/profile/template")
 def profileTemplate():
     conn = mysql.connect
     try:
@@ -146,16 +142,16 @@ def getJobs():
     return json.dumps({"jobs": cur.fetchall()})
 
 
-@app.route("/surveys")
 @jwt_required
+@app.route("/surveys")
 def getSurveys():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("select Id, ShortName, Name, Description from survey")
     return json.dumps({"surveys": cur.fetchall()})
     
 
-@app.route("/survey")
 @jwt_required
+@app.route("/survey")
 def survey():
     conn = mysql.connect
     try:
@@ -171,8 +167,8 @@ def survey():
     finally:
         conn.close()
 
-@app.route("/response", methods=['GET', 'POST'])
 @jwt_required
+@app.route("/response", methods=['GET', 'POST'])
 def response():
     conn = mysql.connect
     try:
@@ -191,8 +187,8 @@ def response():
     finally:
         conn.close()
 
-@app.route("/match")
 @jwt_required
+@app.route("/match")
 def getMatch():
     cur = mysql.connection.cursor()
     profile_id = request.json.get("profileId")
