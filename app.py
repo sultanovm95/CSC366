@@ -38,6 +38,7 @@ app.config.setdefault("MYSQL_CURSORCLASS", None)
 app.config.setdefault("MYSQL_AUTOCOMMIT", False)
 app.config.setdefault("MYSQL_CUSTOM_OPTIONS", None)
 app.config["JWT_SECRET_KEY"] = os.getenv('USER_SECRET')
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 86400
 
 JWTManager(app)
 mysql = MySQL(app)
@@ -128,7 +129,7 @@ def profile():
         conn.close()
 
 @app.route("/profile/match", methods=['GET', 'POST'])
-#@jwt_required()
+@jwt_required()
 def profileMatch(pid=0):
     conn = mysql.connect
     try:
@@ -176,7 +177,7 @@ def profileTemplate():
         conn.close()
 
 @app.route("/jobs", methods=['GET'])
-@jwt_required()
+#@jwt_required()
 def getJobs():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     jobType = request.args.get("jobType", type=str)
