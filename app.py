@@ -60,6 +60,7 @@ def getCriteriaValues():
 
 
 @app.route("/profile", methods=['GET', 'POST', 'PATCH'])
+@jwt_required
 def profile():
     conn = mysql.connect
     try:
@@ -89,6 +90,7 @@ def profile():
 
 
 @app.route("/profile/match", methods=['GET', 'POST'])
+@jwt_required
 def profileMatch(pid=0):
     conn = mysql.connect
     try:
@@ -104,6 +106,7 @@ def profileMatch(pid=0):
 
 
 @app.route("/profile/user", methods=['GET', 'POST'])
+@jwt_required
 def userProfile():
     conn = mysql.connect
     try:
@@ -124,6 +127,7 @@ def userProfile():
 
 
 @app.route("/profile/template")
+@jwt_required
 def profileTemplate():
     conn = mysql.connect
     try:
@@ -142,14 +146,16 @@ def getJobs():
     return json.dumps({"jobs": cur.fetchall()})
 
 
-@app.route("/surveys", methods=['GET'])
+@app.route("/surveys")
+@jwt_required
 def getSurveys():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("select Id, ShortName, Name, Description from survey")
     return json.dumps({"surveys": cur.fetchall()})
     
 
-@app.route("/survey", methods=['GET'])
+@app.route("/survey")
+@jwt_required
 def survey():
     conn = mysql.connect
     try:
@@ -166,6 +172,7 @@ def survey():
         conn.close()
 
 @app.route("/response", methods=['GET', 'POST'])
+@jwt_required
 def response():
     conn = mysql.connect
     try:
@@ -185,6 +192,7 @@ def response():
         conn.close()
 
 @app.route("/match")
+@jwt_required
 def getMatch():
     cur = mysql.connection.cursor()
     profile_id = request.json.get("profileId")
