@@ -62,7 +62,7 @@ def signup():
                        'AId': aid,
                        'account_type': user['account_type']}
             token = create_access_token(identity=payload)
-            return jsonify({'token': token.decode('UTF-8')}), 201
+            return jsonify({'token': token}), 201
 
 
 @app.route("/users/login", methods=["POST"])
