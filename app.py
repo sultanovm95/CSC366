@@ -64,6 +64,13 @@ def dbUsers():
     return str(rv)
 
 
+@app.route("/criteria_values")
+def getCriteriaValues():
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cur.execute("select CId,cName,cDescription,0 as cValue,0 as importanceRating from criteria")
+    return json.dumps({"criteria": cur.fetchall()})
+
+
 @app.route("/profile", methods=['GET', 'POST', 'PATCH'])
 @token_required
 def profile():
@@ -146,7 +153,7 @@ def profileTemplate():
         conn.close()
 
 @app.route("/jobs")
-@token_required
+# @token_required
 def getJobs():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("select ONetId, ONetJob, ONetDescription from onet")
