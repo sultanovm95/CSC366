@@ -55,7 +55,7 @@ def dbUsers():
 @app.route("/criteria_values")
 def getCriteriaValues():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cur.execute("select CId,cName,cDescription,0 as cValue,0 as importanceRating from criteria")
+    cur.execute("select CId,cName,cDescription,4 as cValue,4 as importanceRating from criteria")
     return json.dumps({"criteria": cur.fetchall()})
 
 
