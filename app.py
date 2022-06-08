@@ -3,9 +3,15 @@ import MySQLdb
 from flask import Flask, jsonify, request
 from flask_mysqldb import MySQL
 from flask_cors import CORS
+from flask_jwt_extended import jwt_required, get_jwt_identity
 import json
 import os
+<<<<<<< HEAD
 from src import queries
+=======
+import jwt
+from src import operations, queries
+>>>>>>> fff9f48d66aca6bcfb248d22543707cc3f17ecf0
 from dotenv import load_dotenv
 from src.user import User
 from src.matcher import match, getONetJobs, getVectorizedProfile, match_desired_onet, match_exp_onet
@@ -17,6 +23,10 @@ CORS(app)
 # Loads Enviroment Variables from .env file use command: 'touch .env' to create
 load_dotenv()
 # need to have the following variables in .env file by name
+<<<<<<< HEAD
+=======
+app.config["USER_SECRET"] = os.getenv("USER_SECRET")
+>>>>>>> fff9f48d66aca6bcfb248d22543707cc3f17ecf0
 USER = os.getenv("MYSQL_USER")
 PASSWORD = os.getenv("PASSWORD")
 PORT = int(os.getenv("PORT"))
@@ -94,7 +104,9 @@ def dbUsers():
 @app.route("/criteria_values")
 def getCriteriaValues():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cur.execute("select CId,cName,cDescription,4 as cValue,4 as importanceRating from criteria")
+    cur.execute(
+        "select CId,cName,cDescription,4 as cValue,4 as importanceRating from criteria"
+    )
     return json.dumps({"criteria": cur.fetchall()})
 
 @app.route("/profile", methods=['GET', 'POST', 'PATCH'])
@@ -102,20 +114,20 @@ def getCriteriaValues():
 def profile():
     conn = mysql.connect
     try:
-        if request.method == 'GET':
+        if request.method == "GET":
             pid = request.args.get("pid", type=int)
             if pid == None:
                 return {"Error": "pid not provided"}, 400
 
             return queries.getProfile(conn, pid), 200
 
-        elif request.method == 'POST':
+        elif request.method == "POST":
             aid = request.args.get("aid", type=int)
             if aid == None:
                 return {"Error": "Profile POST requires an aid"}, 400
             return queries.addDesiredProfile(conn, aid, request.json)
 
-        elif request.method == 'PATCH':
+        elif request.method == "PATCH":
             pid = request.args.get("pid", type=int)
             if pid == None:
                 return {"Error": "pid not provided"}, 400
@@ -131,12 +143,12 @@ def profile():
 def profileMatch(pid=0):
     conn = mysql.connect
     try:
-        if request.method == 'GET':
+        if request.method == "GET":
             pid = request.args.get("pid", type=int)
             if pid == None:
                 return {"Error": "pid not provided"}, 400
             return queries.getJobMatches(conn, pid)
-        elif request.method == 'POST':
+        elif request.method == "POST":
             return queries.postJobMatches(conn, {"Profile": "Not Actual"})
     finally:
         conn.close()
@@ -149,10 +161,10 @@ def userProfile():
         aid = request.args.get("aid", type=int)
         if aid == None:
             return {"Error": "aid not provided"}, 400
-        if request.method == 'GET':
+        if request.method == "GET":
             return queries.getUserProfiles(conn, aid)
-        elif request.method == 'POST':
-            #for getting matches with profile json templates
+        elif request.method == "POST":
+            # for getting matches with profile json templates
             return queries.postUserProfiles(conn, aid, request.json)
         else:
             return "{0} not an implemented method".format(request.method)
@@ -166,7 +178,7 @@ def userProfile():
 def profileTemplate():
     conn = mysql.connect
     try:
-        if request.method == 'GET':
+        if request.method == "GET":
             return json.dumps(queries.getTemplate(conn))
     except Exception as e:
         return str(e), 500
@@ -179,9 +191,19 @@ def getJobs():
     #current_user = get_jwt_identity()
     #print(current_user)
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cur.execute("select ONetId, ONetJob, ONetDescription from onet")
+    jobType = request.args.get("jobType", type=str)
+    if (jobType == None or jobType == "All"):
+        cur.execute("select ONetId, ONetJob, ONetDescription from onet")
+    else:
+        cur.execute("select ONetId, ONetJob, ONetDescription from onet where ONetDescription = \"" + jobType + "\"")
     return json.dumps({"jobs": cur.fetchall()})
 
+@app.route("/jobs/descriptions")
+# @token_required
+def getJobDescriptions():
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cur.execute("select distinct ONetDescription from onet")
+    return json.dumps({"jobDescriptions": cur.fetchall()})
 
 @app.route("/surveys")
 @jwt_required()
@@ -189,14 +211,14 @@ def getSurveys():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("select Id, ShortName, Name, Description from survey")
     return json.dumps({"surveys": cur.fetchall()})
-    
+
 
 @app.route("/survey")
 @jwt_required()
 def survey():
     conn = mysql.connect
     try:
-        if request.method == 'GET':
+        if request.method == "GET":
             sid = request.args.get("sid", type=int)
             if sid == None:
                 return {"Error": "survey sid not provided"}, 400
@@ -216,9 +238,9 @@ def response():
         aid = request.args.get("aid", type=int)
         if aid == None:
             return {"Error": "Account aid not provided"}, 400
-        if request.method == 'GET':
+        if request.method == "GET":
             return queries.getResponse(conn, aid)
-        elif request.method == 'POST':
+        elif request.method == "POST":
             body = request.json
             if body == None:
                 return {"Error": "No response payload sent"}, 400
@@ -227,6 +249,7 @@ def response():
         return str(e), 500
     finally:
         conn.close()
+
 
 @app.route("/match")
 @jwt_required()

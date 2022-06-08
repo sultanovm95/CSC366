@@ -55,7 +55,7 @@ CREATE TABLE response (
     PRIMARY KEY (Id),
     FOREIGN KEY (UserId) REFERENCES account(Id),
     FOREIGN KEY (SurveyId) REFERENCES survey(Id),
-    FOREIGN KEY (SurveyId) REFERENCES profile(PId)
+    FOREIGN KEY (SurveyProfile) REFERENCES profile(PId)
 );
 
 CREATE TABLE onet (
