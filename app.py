@@ -164,9 +164,19 @@ def profileTemplate():
 @app.route("/jobs")
 def getJobs():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cur.execute("select ONetId, ONetJob, ONetDescription from onet")
+    jobType = request.args.get("jobType", type=str)
+    if (jobType == None or jobType == "All"):
+        cur.execute("select ONetId, ONetJob, ONetDescription from onet")
+    else:
+        cur.execute("select ONetId, ONetJob, ONetDescription from onet where ONetDescription = \"" + jobType + "\"")
     return json.dumps({"jobs": cur.fetchall()})
 
+@app.route("/jobs/descriptions")
+# @token_required
+def getJobDescriptions():
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cur.execute("select distinct ONetDescription from onet")
+    return json.dumps({"jobDescriptions": cur.fetchall()})
 
 @app.route("/surveys")
 @jwt_required()
