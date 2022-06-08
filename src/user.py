@@ -35,6 +35,7 @@ class User:
                         SELECT MAX(id)
                         FROM account''')
             max_id = cur.fetchone()
+            id
             if max_id:
                 id = int(max_id[0]) + 1
             else:
@@ -52,7 +53,7 @@ class User:
             cur.close()
             # close connection
             conn.close()
-            return {'message': 'User created successfully'}
+            return id
         except Exception as e:
             print(e)
             return {'message': 'Something went wrong'}, 500

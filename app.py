@@ -216,9 +216,10 @@ def signup():
         if u.check_user(user):
             return {"Error": "User already exists"}, 500
         else:
-            u.create_user(user)
+            aid = u.create_user(user)
             payload = {'name': user['name'],
                        'email': user['email'],
+                       'AId': aid,
                        'account_type': user['account_type'],
                        'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)}
             token = jwt.encode(payload, app.config['USER_SECRET'])
