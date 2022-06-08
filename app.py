@@ -11,13 +11,8 @@ from src import operations, queries
 from dotenv import load_dotenv
 from functools import wraps
 from src.user import User
-from src.matcher import (
-    match,
-    getONetJobs,
-    getVectorizedProfile,
-    match_desired_onet,
-    match_exp_onet,
-)
+from src.matcher import match, getONetJobs, getVectorizedProfile, match_desired_onet, match_exp_onet
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 app = Flask(__name__)
 CORS(app)
@@ -82,8 +77,8 @@ def getCriteriaValues():
     return json.dumps({"criteria": cur.fetchall()})
 
 
-@app.route("/profile", methods=["GET", "POST", "PATCH"])
-@token_required
+@app.route("/profile", methods=['GET', 'POST', 'PATCH'])
+@jwt_required
 def profile():
     conn = mysql.connect
     try:
@@ -113,8 +108,8 @@ def profile():
         conn.close()
 
 
-@app.route("/profile/match", methods=["GET", "POST"])
-@token_required
+@app.route("/profile/match", methods=['GET', 'POST'])
+@jwt_required
 def profileMatch(pid=0):
 
     conn = mysql.connect
@@ -130,8 +125,8 @@ def profileMatch(pid=0):
         conn.close()
 
 
-@app.route("/profile/user", methods=["GET", "POST"])
-@token_required
+@app.route("/profile/user", methods=['GET', 'POST'])
+@jwt_required
 def userProfile():
     conn = mysql.connect
     try:
@@ -152,7 +147,7 @@ def userProfile():
 
 
 @app.route("/profile/template")
-@token_required
+@jwt_required
 def profileTemplate():
     conn = mysql.connect
     try:
@@ -173,7 +168,7 @@ def getJobs():
 
 
 @app.route("/surveys")
-@token_required
+@jwt_required
 def getSurveys():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("select Id, ShortName, Name, Description from survey")
@@ -181,7 +176,7 @@ def getSurveys():
 
 
 @app.route("/survey")
-@token_required
+@jwt_required
 def survey():
     conn = mysql.connect
     try:
@@ -197,9 +192,8 @@ def survey():
     finally:
         conn.close()
 
-
-@app.route("/response", methods=["GET", "POST"])
-@token_required
+@app.route("/response", methods=['GET', 'POST'])
+@jwt_required
 def response():
     conn = mysql.connect
     try:
@@ -220,7 +214,7 @@ def response():
 
 
 @app.route("/match")
-@token_required
+@jwt_required
 def getMatch():
     cur = mysql.connection.cursor()
     profile_id = request.json.get("profileId")
