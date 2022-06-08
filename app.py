@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 from functools import wraps
 from src.user import User
 from src.matcher import match, getONetJobs, getVectorizedProfile, match_desired_onet, match_exp_onet
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 app = Flask(__name__)
 CORS(app)
@@ -43,23 +44,6 @@ app.config.setdefault("MYSQL_CUSTOM_OPTIONS", None)
 
 mysql = MySQL(app)
 
-def token_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        auth = request.headers['Authorization'].split(" ")
-        token = auth[1]
-        #token = request.args.get('token')
-        print(token)
-        if not token:
-            return jsonify({'message': 'Token is missing!'}), 401
-        try:
-            data = jwt.decode(token, app.config['USER_SECRET'])
-        except:
-            return jsonify({'message': 'Invalid token'}), 401
-        return f(data, *args, kwargs)
-    return decorated
-        
-
 @app.route("/")
 def dbUsers():
     cur = mysql.connection.cursor()
@@ -76,7 +60,6 @@ def getCriteriaValues():
 
 
 @app.route("/profile", methods=['GET', 'POST', 'PATCH'])
-@token_required
 def profile():
     conn = mysql.connect
     try:
@@ -106,9 +89,7 @@ def profile():
 
 
 @app.route("/profile/match", methods=['GET', 'POST'])
-@token_required
 def profileMatch(pid=0):
-
     conn = mysql.connect
     try:
         if request.method == 'GET':
@@ -123,7 +104,6 @@ def profileMatch(pid=0):
 
 
 @app.route("/profile/user", methods=['GET', 'POST'])
-@token_required
 def userProfile():
     conn = mysql.connect
     try:
@@ -144,7 +124,6 @@ def userProfile():
 
 
 @app.route("/profile/template")
-@token_required
 def profileTemplate():
     conn = mysql.connect
     try:
@@ -155,25 +134,23 @@ def profileTemplate():
     finally:
         conn.close()
 
+@jwt_required()
 @app.route("/jobs", methods=['GET'])
-@token_required
-def getJobs(token):
+def getJobs():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("select ONetId, ONetJob, ONetDescription from onet")
     return json.dumps({"jobs": cur.fetchall()})
 
 
-@app.route("/surveys", methods['GET'])
-@token_required
-def getSurveys(token):
+@app.route("/surveys", methods=['GET'])
+def getSurveys():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("select Id, ShortName, Name, Description from survey")
     return json.dumps({"surveys": cur.fetchall()})
     
 
-@app.route("/survey", methods['GET'])
-#@token_required
-def survey(token):
+@app.route("/survey", methods=['GET'])
+def survey():
     conn = mysql.connect
     try:
         if request.method == 'GET':
@@ -189,8 +166,7 @@ def survey(token):
         conn.close()
 
 @app.route("/response", methods=['GET', 'POST'])
-@token_required
-def response(token):
+def response():
     conn = mysql.connect
     try:
         aid = request.args.get("aid", type=int)
@@ -209,7 +185,6 @@ def response(token):
         conn.close()
 
 @app.route("/match")
-@token_required
 def getMatch():
     cur = mysql.connection.cursor()
     profile_id = request.json.get("profileId")
