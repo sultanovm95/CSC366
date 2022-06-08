@@ -1,4 +1,3 @@
-import datetime
 import MySQLdb
 from flask import Flask, jsonify, request
 from flask_mysqldb import MySQL
@@ -60,8 +59,7 @@ def signup():
             payload = {'name': user['name'],
                        'email': user['email'],
                        'AId': aid,
-                       'account_type': user['account_type'],
-                       'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)}
+                       'account_type': user['account_type']}
             token = create_access_token(identity=payload)
             return jsonify({'token': token.decode('UTF-8')}), 201
 
@@ -77,8 +75,7 @@ def login():
         aid = u.verify_user(user)
         if aid >= 0:
             payload = {'email': user['email'],
-                       'AId': aid,
-                       'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)}
+                       'AId': aid}
             token = create_access_token(identity=payload)
             return jsonify({'token': token}), 200
         else:
@@ -131,7 +128,7 @@ def profile():
         conn.close()
 
 @app.route("/profile/match", methods=['GET', 'POST'])
-@jwt_required()
+#@jwt_required()
 def profileMatch(pid=0):
     conn = mysql.connect
     try:
@@ -150,7 +147,8 @@ def profileMatch(pid=0):
 def userProfile():
     conn = mysql.connect
     try:
-        aid = request.args.get("aid", type=int)
+        account = get_jwt_identity()
+        aid = account["AId"]
         if aid == None:
             return {"Error": "aid not provided"}, 400
         if request.method == "GET":
