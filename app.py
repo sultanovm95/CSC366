@@ -269,15 +269,16 @@ def getMatch():
 @jwt_required()
 def delete():
     if request.method == "POST":
-        curr_user = get_jwt_identity()
-        profile_id = request.json.get("pid")
+        curr_user = get_jwt_identity()["AId"]
+        print(curr_user)
+        profile_id = request.args.get("pid", type=int)
 
         if profile_id:
             conn = mysql.connection
             result = operations.delete_profile(conn, curr_user, profile_id=profile_id)
             return result
         return {"Error", "ProfileId not found"}, 500
-    return {"Error": "Post request only"}, 500
+    return {"Error": "POST request only"}, 500
 
 if __name__ == "__main__":
     app.run(host="localhost", port=5000, debug=True)
