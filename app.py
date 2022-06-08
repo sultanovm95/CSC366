@@ -227,8 +227,9 @@ def survey():
 @jwt_required()
 def response():
     conn = mysql.connect
+    account = get_jwt_identity()
+    aid = account["AId"]
     try:
-        aid = request.args.get("aid", type=int)
         if aid == None:
             return {"Error": "Account aid not provided"}, 400
         if request.method == "GET":
