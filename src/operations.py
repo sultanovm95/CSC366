@@ -49,7 +49,7 @@ def delete_profile(conn, user_id, profile_id):
 
     if len(result) != 0:
         if result[0][0].lower() == "experience":
-            return _delete_desired(conn, user_id, profile_id)
+            return _delete_experience(conn, user_id, profile_id)
         elif result[0][0].lower() == "desired":
             return _delete_desired(conn, user_id, profile_id)
     return {"Error": "Profile Id not found"}
