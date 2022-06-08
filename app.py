@@ -1,4 +1,3 @@
-from crypt import methods
 import datetime
 import MySQLdb
 from flask import Flask, jsonify, request
@@ -6,13 +5,11 @@ from flask_mysqldb import MySQL
 from flask_cors import CORS
 import json
 import os
-import jwt
 from src import queries
 from dotenv import load_dotenv
-from functools import wraps
 from src.user import User
 from src.matcher import match, getONetJobs, getVectorizedProfile, match_desired_onet, match_exp_onet
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, JWTManager
 
 app = Flask(__name__)
 CORS(app)
@@ -20,7 +17,6 @@ CORS(app)
 # Loads Enviroment Variables from .env file use command: 'touch .env' to create
 load_dotenv()
 # need to have the following variables in .env file by name
-app.config['USER_SECRET'] = os.getenv('USER_SECRET')
 USER = os.getenv("MYSQL_USER")
 PASSWORD = os.getenv("PASSWORD")
 PORT = int(os.getenv("PORT"))
@@ -41,8 +37,51 @@ app.config.setdefault("MYSQL_SQL_MODE", None)
 app.config.setdefault("MYSQL_CURSORCLASS", None)
 app.config.setdefault("MYSQL_AUTOCOMMIT", False)
 app.config.setdefault("MYSQL_CUSTOM_OPTIONS", None)
+app.config["JWT_SECRET_KEY"] = os.getenv('USER_SECRET')
 
+JWTManager(app)
 mysql = MySQL(app)
+
+@app.route("/users/signup", methods=["POST"])
+def signup():
+    if request.method == "POST":
+        user = {}
+        user['name'] = request.json['firstName'] + " " + request.json['lastName']
+        user['email'] = request.json['email']
+        user['password'] = request.json['password']
+        user['account_type'] = 'user'
+        
+        u = User()
+        if u.check_user(user):
+            return {"Error": "User already exists"}, 500
+        else:
+            aid = u.create_user(user)
+            payload = {'name': user['name'],
+                       'email': user['email'],
+                       'AId': aid,
+                       'account_type': user['account_type'],
+                       'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)}
+            token = create_access_token(identity=payload)
+            return jsonify({'token': token.decode('UTF-8')}), 201
+
+
+@app.route("/users/login", methods=["POST"])
+def login():
+    if request.method == "POST":
+        user = {}
+        user['email'] = request.json['email']
+        user['password'] = request.json['password']
+        
+        u = User()
+        if u.verify_user(user):
+            payload = {'email': user['email'],
+                       'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)}
+            token = create_access_token(identity=payload)
+            print(token)
+            return jsonify({'token': token}), 200
+        else:
+            return {"Error": "User not found"}, 500
+
 
 @app.route("/")
 def dbUsers():
@@ -58,8 +97,8 @@ def getCriteriaValues():
     cur.execute("select CId,cName,cDescription,4 as cValue,4 as importanceRating from criteria")
     return json.dumps({"criteria": cur.fetchall()})
 
-@jwt_required
 @app.route("/profile", methods=['GET', 'POST', 'PATCH'])
+@jwt_required()
 def profile():
     conn = mysql.connect
     try:
@@ -87,8 +126,8 @@ def profile():
     finally:
         conn.close()
 
-@jwt_required
 @app.route("/profile/match", methods=['GET', 'POST'])
+@jwt_required()
 def profileMatch(pid=0):
     conn = mysql.connect
     try:
@@ -102,8 +141,8 @@ def profileMatch(pid=0):
     finally:
         conn.close()
 
-@jwt_required
 @app.route("/profile/user", methods=['GET', 'POST'])
+@jwt_required()
 def userProfile():
     conn = mysql.connect
     try:
@@ -122,8 +161,8 @@ def userProfile():
     finally:
         conn.close()
 
-@jwt_required
 @app.route("/profile/template")
+@jwt_required()
 def profileTemplate():
     conn = mysql.connect
     try:
@@ -134,24 +173,26 @@ def profileTemplate():
     finally:
         conn.close()
 
-@jwt_required()
 @app.route("/jobs", methods=['GET'])
+@jwt_required()
 def getJobs():
+    #current_user = get_jwt_identity()
+    #print(current_user)
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("select ONetId, ONetJob, ONetDescription from onet")
     return json.dumps({"jobs": cur.fetchall()})
 
 
-@jwt_required
 @app.route("/surveys")
+@jwt_required()
 def getSurveys():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("select Id, ShortName, Name, Description from survey")
     return json.dumps({"surveys": cur.fetchall()})
     
 
-@jwt_required
 @app.route("/survey")
+@jwt_required()
 def survey():
     conn = mysql.connect
     try:
@@ -167,8 +208,8 @@ def survey():
     finally:
         conn.close()
 
-@jwt_required
 @app.route("/response", methods=['GET', 'POST'])
+@jwt_required()
 def response():
     conn = mysql.connect
     try:
@@ -187,8 +228,8 @@ def response():
     finally:
         conn.close()
 
-@jwt_required
 @app.route("/match")
+@jwt_required()
 def getMatch():
     cur = mysql.connection.cursor()
     profile_id = request.json.get("profileId")
@@ -206,45 +247,6 @@ def getMatch():
     matches = match_exp_onet(profile, onet)
     print(matches)
     return {"matches": matches}
-
-@app.route("/users/signup", methods=["POST"])
-def signup():
-    if request.method == "POST":
-        user = {}
-        user['name'] = request.json['firstName'] + " " + request.json['lastName']
-        user['email'] = request.json['email']
-        user['password'] = request.json['password']
-        user['account_type'] = 'user'
-        
-        u = User()
-        if u.check_user(user):
-            return {"Error": "User already exists"}, 500
-        else:
-            aid = u.create_user(user)
-            payload = {'name': user['name'],
-                       'email': user['email'],
-                       'AId': aid,
-                       'account_type': user['account_type'],
-                       'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)}
-            token = jwt.encode(payload, app.config['USER_SECRET'])
-            return jsonify({'token': token.decode('UTF-8')}), 201
-
-
-@app.route("/users/login", methods=["POST"])
-def login():
-    if request.method == "POST":
-        user = {}
-        user['email'] = request.json['email']
-        user['password'] = request.json['password']
-        
-        u = User()
-        if u.verify_user(user):
-            payload = {'email': user['email'],
-                       'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)}
-            token = jwt.encode(payload, app.config['USER_SECRET'])
-            return jsonify({'token': token.decode('UTF-8')}), 200
-        else:
-            return {"Error": "User not found"}, 500
 
 if __name__ == "__main__":
     app.run(host="localhost", port=5000, debug=True)
