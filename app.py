@@ -1,3 +1,4 @@
+from crypt import methods
 import datetime
 import MySQLdb
 from flask import Flask, jsonify, request
@@ -45,7 +46,10 @@ mysql = MySQL(app)
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        token = request.args.get('token')
+        auth = request.headers['Authorization'].split(" ")
+        token = auth[1]
+        #token = request.args.get('token')
+        print(token)
         if not token:
             return jsonify({'message': 'Token is missing!'}), 401
         try:
@@ -75,7 +79,6 @@ def profile():
                 return {"Error": "pid not provided"}, 400
 
             return queries.getProfile(conn, pid), 200
-            #return getProfile(conn, pid)
 
         elif request.method == 'POST':
             aid = request.args.get("aid", type=int)
@@ -145,25 +148,25 @@ def profileTemplate():
     finally:
         conn.close()
 
-@app.route("/jobs")
+@app.route("/jobs", methods=['GET'])
 @token_required
-def getJobs():
+def getJobs(token):
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("select ONetId, ONetJob, ONetDescription from onet")
     return json.dumps({"jobs": cur.fetchall()})
 
 
-@app.route("/surveys")
+@app.route("/surveys", methods['GET'])
 @token_required
-def getSurveys():
+def getSurveys(token):
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("select Id, ShortName, Name, Description from survey")
     return json.dumps({"surveys": cur.fetchall()})
     
 
-@app.route("/survey")
-@token_required
-def survey():
+@app.route("/survey", methods['GET'])
+#@token_required
+def survey(token):
     conn = mysql.connect
     try:
         if request.method == 'GET':
@@ -180,7 +183,7 @@ def survey():
 
 @app.route("/response", methods=['GET', 'POST'])
 @token_required
-def response():
+def response(token):
     conn = mysql.connect
     try:
         aid = request.args.get("aid", type=int)
@@ -244,15 +247,15 @@ def signup():
 def login():
     if request.method == "POST":
         user = {}
-        user['email'] = request.form['email']
-        user['password'] = request.form['password']
+        user['email'] = request.json['email']
+        user['password'] = request.json['password']
         
         u = User()
         if u.verify_user(user):
             payload = {'email': user['email'],
                        'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)}
             token = jwt.encode(payload, app.config['USER_SECRET'])
-            return jsonify({'token': token.decode('UTF-8')})
+            return jsonify({'token': token.decode('UTF-8')}), 200
         else:
             return {"Error": "User not found"}, 500
 
