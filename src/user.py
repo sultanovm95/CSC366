@@ -99,6 +99,7 @@ class User:
                         {'email': user['email']})
             # fetch the data
             account = cur.fetchone()
+            print(account)
             if account:
                 if bcrypt.checkpw(user['password'].encode('utf-8'), account["password"].encode('utf-8')):
                     return account["Id"]
