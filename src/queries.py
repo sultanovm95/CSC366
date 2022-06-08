@@ -233,6 +233,8 @@ def createSurvey(surveyQ, questionA):
 
 
 def getUserProfiles(conn, aid):
+    # if profileType is None:
+    #     profileType='(Experience, Desired)'
     try:
         cur = conn.cursor(MySQLdb.cursors.DictCursor)
         cur.execute(
@@ -242,10 +244,11 @@ def getUserProfiles(conn, aid):
             union
             (select * from accountProfile)) AS userProfiles
             join profile on userProfiles.PId = profile.PId 
-            where AId = %(AId)s
             """,
             {"AId": aid},
+            # , "profileType": profileType
         )
+        # where AId = %(AId)s
         return json.dumps({"AId": aid, "profiles": cur.fetchall()})
     except:
         return "Error: Couldn't GET user Profiles"
