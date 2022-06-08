@@ -4,17 +4,17 @@ def _delete_experience(conn, user_id, profile_id):
         f"SELECT account.id, response.id \
             FROM account, response, profile \
             WHERE response.userid=account.id AND profile.pid=surveyProfile AND \
-            account.id={user_id} and profile.pid={profile_id};"
+            profile.pid={profile_id};"
+            # and account.id={user_id}
     )
     exists = cursor.fetchall()
     print(exists)
-    exists = ((1, 1))
 
     if len(exists) != 0:
         response_id = exists[0][1]
 
         cursor.execute(f"DELETE FROM answers WHERE responseId={response_id}")
-        cursor.execute(f"DELETE FROM responses WHERE id={response_id}")
+        cursor.execute(f"DELETE FROM response WHERE id={response_id}")
         cursor.execute(f"DELETE FROM profileCriteria WHERE profileCriteria.pid={profile_id}")
         cursor.execute(f"DELETE FROM profile WHERE profile.pid={profile_id}")
         conn.commit()

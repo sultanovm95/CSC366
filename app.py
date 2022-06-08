@@ -265,12 +265,11 @@ def getMatch():
     print(matches)
     return {"matches": matches}
 
-@app.route("/delete", methods=["POST"])
+@app.route("/delete", methods=["GET"])
 @jwt_required()
 def delete():
-    if request.method == "POST":
+    if request.method == "GET":
         curr_user = get_jwt_identity()["AId"]
-        print(curr_user)
         profile_id = request.args.get("pid", type=int)
 
         if profile_id:
@@ -278,7 +277,7 @@ def delete():
             result = operations.delete_profile(conn, curr_user, profile_id=profile_id)
             return result
         return {"Error", "ProfileId not found"}, 500
-    return {"Error": "POST request only"}, 500
+    return {"Error": "GET request only"}, 500
 
 if __name__ == "__main__":
     app.run(host="localhost", port=5000, debug=True)
