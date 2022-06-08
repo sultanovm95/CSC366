@@ -5,8 +5,8 @@ from flask_mysqldb import MySQL
 from flask_cors import CORS
 import json
 import os
-from src import queries
 import jwt
+from src import queries
 from dotenv import load_dotenv
 from functools import wraps
 from src.user import User
@@ -221,7 +221,6 @@ def getMatch():
 @app.route("/users/signup", methods=["POST"])
 def signup():
     if request.method == "POST":
-        print(request.json)
         user = {}
         user['name'] = request.json['firstName'] + " " + request.json['lastName']
         user['email'] = request.json['email']
@@ -238,7 +237,7 @@ def signup():
                        'account_type': user['account_type'],
                        'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)}
             token = jwt.encode(payload, app.config['USER_SECRET'])
-            return jsonify({'token': token.decode('UTF-8')})
+            return jsonify({'token': token.decode('UTF-8')}), 201
 
 
 @app.route("/users/login", methods=["POST"])
