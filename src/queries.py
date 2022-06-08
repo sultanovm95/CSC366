@@ -1,3 +1,4 @@
+import pprint
 import pandas as pd
 import MySQLdb
 import json
@@ -233,23 +234,26 @@ def createSurvey(surveyQ, questionA):
 
 
 def getUserProfiles(conn, aid):
-    # if profileType is None:
-    #     profileType='(Experience, Desired)'
     try:
         cur = conn.cursor(MySQLdb.cursors.DictCursor)
         cur.execute(
-            """
-            select AId, profile.PId as PId, PType, PName from 
-            ((select userId as AId, SurveyProfile as PId from response)
-            union
-            (select * from accountProfile)) AS userProfiles
-            join profile on userProfiles.PId = profile.PId 
-            """,
-            {"AId": aid},
-            # , "profileType": profileType
+            f"SELECT AId, profile.PId as PId, PType, PName, AnswerDate as date \
+                FROM \
+                    ((select userId as AId, SurveyProfile as PId from response) \
+                UNION \
+                    (select * from accountProfile)) AS userProfiles \
+            JOIN profile on userProfiles.PId = profile.PId \
+            LEFT JOIN response on response.UserId = userProfiles.aid AND response.SurveyProfile = profile.PId \
+            "
         )
-        # where AId = %(AId)s
-        return json.dumps({"AId": aid, "profiles": cur.fetchall()})
+        # where AId = {aid}
+        data = cur.fetchall()
+        
+        for d in data:
+            if d["date"]:
+                d["date"] = d["date"].strftime("%d %B, %Y")
+
+        return json.dumps({"AId": aid, "profiles": data})
     except:
         return "Error: Couldn't GET user Profiles"
     finally:

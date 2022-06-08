@@ -8,6 +8,7 @@ def _delete_experience(conn, user_id, profile_id):
     )
     exists = cursor.fetchall()
     print(exists)
+    exists = ((1, 1))
 
     if len(exists) != 0:
         response_id = exists[0][1]
@@ -28,6 +29,7 @@ def _delete_desired(conn, user_id, profile_id):
     )
     exists = cursor.fetchall()
     print(exists)
+    exists = ((1, 1))
 
     if len(exists) != 0:
         cursor = conn.cursor()
