@@ -237,14 +237,16 @@ def getUserProfiles(conn, aid):
     try:
         cur = conn.cursor(MySQLdb.cursors.DictCursor)
         cur.execute(
-            f"SELECT AId, profile.PId as PId, PType, PName, AnswerDate as date \
-                FROM \
-                    ((select userId as AId, SurveyProfile as PId from response) \
-                UNION \
-                    (select * from accountProfile)) AS userProfiles \
-            JOIN profile on userProfiles.PId = profile.PId \
-            LEFT JOIN response on response.UserId = userProfiles.aid AND response.SurveyProfile = profile.PId \
-            "
+            """SELECT AId, profile.PId as PId, PType, PName, AnswerDate as date
+                FROM
+                    ((select userId as AId, SurveyProfile as PId from response)
+                UNION
+                    (select * from accountProfile)) AS userProfiles
+            JOIN profile on userProfiles.PId = profile.PId
+            LEFT JOIN response on response.UserId = userProfiles.aid AND response.SurveyProfile = profile.PId
+            """,
+            #where AId = %(AId)s
+            #{"AId": aid}
         )
         # where AId = {aid}
         data = cur.fetchall()
@@ -319,23 +321,13 @@ def getSurvey(conn, sid):
 
 def createQuestion(num, type, prompt, choices):
     qtype = ["dropdown", "matrix"]
-    if type == 1:
-        return {
-            "name": str(num),
-            "type": qtype[type],
-            "title": prompt,
-            "isRequired": True,
-            "columns": choices,
-            "rows": [{"value": "", "text": ""}],
-        }
-    else:
-        return {
-            "name": str(num),
-            "type": qtype[type],
-            "title": prompt,
-            "isRequired": True,
-            "choices": choices,
-        }
+    return {
+        "name": str(num),
+        "type": "dropdown",
+        "title": prompt,
+        "isRequired": True,
+        "choices": choices,
+    }
 
 
 def getResponse(conn, aid):
