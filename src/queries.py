@@ -244,9 +244,9 @@ def getUserProfiles(conn, aid):
                     (select * from accountProfile)) AS userProfiles
             JOIN profile on userProfiles.PId = profile.PId
             LEFT JOIN response on response.UserId = userProfiles.aid AND response.SurveyProfile = profile.PId
+            where AId = %(AId)s
             """,
-            #where AId = %(AId)s
-            #{"AId": aid}
+            {"AId": aid}
         )
         # where AId = {aid}
         data = cur.fetchall()

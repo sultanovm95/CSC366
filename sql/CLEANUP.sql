@@ -13,16 +13,4 @@ DROP TABLE IF EXISTS onet;
 DROP TABLE IF EXISTS accountProfile;
 DROP TABLE IF EXISTS responseProfile;
 
--- Drop Statements for old tables that may still be around
-DROP TABLE IF EXISTS feautures;
-DROP TABLE IF EXISTS oNETProfileCriteria;
-DROP TABLE IF EXISTS desiredProfileCriteria;
-DROP TABLE IF EXISTS surveyProfileCriteria;
-DROP TABLE IF EXISTS surveyResponse;
-
--- Prof told us to remove and just redirect to page
--- Move some of the meta data that would go here to onet table
-DROP TABLE IF EXISTS features;
-DROP TABLE IF EXISTS jobFeatures;
-
 SET FOREIGN_KEY_CHECKS = 1;
