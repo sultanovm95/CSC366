@@ -83,6 +83,20 @@ def login():
             return {"Error": "User not found"}, 500
 
 
+
+@app.route("/users/account")
+def getAccountId():
+    email = request.args.get("email", type=str)
+    cur = mysql.connection.cursor()
+    if email != None:
+        cur.execute("select id from account where email =\"" + email + "\"")
+    else: 
+        cur.execute("select max(id) from account")
+    rv = cur.fetchall()
+    return (str(rv[0]))[1:-2]
+
+
+
 @app.route("/")
 def dbUsers():
     cur = mysql.connection.cursor()
