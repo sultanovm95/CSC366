@@ -100,9 +100,7 @@ def getAccountId():
 @app.route("/")
 def dbUsers():
     cur = mysql.connection.cursor()
-    cur.execute("select user,host from mysql.user")
-    rv = cur.fetchall()
-    return str(rv)
+    return "Successfully connected to database"
 
 
 @app.route("/criteria_values")

@@ -11,6 +11,9 @@ import math
 load_dotenv()
 
 # PORT for MYSQL
+USER = os.getenv("MYSQL_USER")
+PASSWORD = os.getenv("PASSWORD")
+HOST = os.getenv("MYSQL_HOST")
 PORT = int(os.getenv("PORT"))
 # Either Absolute path to dir, relative path, or nothing
 DIRPATH = os.getenv("DIRPATH")
@@ -406,7 +409,7 @@ def build_tables(conn, file_path=DIRPATH + "sql/SETUP.sql"):
 
 
 if __name__ == "__main__":
-    conn = MySQLdb.connect(host="127.0.0.1", port=PORT, user="root", database=DB)
+    conn = MySQLdb.connect(host=HOST, port=PORT, user=USER, password=PASSWORD, database=DB)
     drop_tables(conn)
     build_tables(conn)
 
