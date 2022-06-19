@@ -211,7 +211,7 @@ def getJobDescriptions():
 
 
 @app.route("/surveys")
-@jwt_required()
+#@jwt_required()
 def getSurveys():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("select Id, ShortName, Name, Description from survey")
@@ -219,7 +219,7 @@ def getSurveys():
 
 
 @app.route("/survey")
-@jwt_required()
+#@jwt_required()
 def survey():
     conn = mysql.connect
     try:
